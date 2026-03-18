@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import laravel, { refreshPaths } from "laravel-vite-plugin";
-import tailwindcss from '@tailwindcss/vite'
+import tailwindcss from "@tailwindcss/vite";
 // import react from '@vitejs/plugin-react';
 // import vue from '@vitejs/plugin-vue';
 

@@ -1,8 +1,13 @@
 {
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
   },
   "dependencies": {
     "axios": "^1.6.8",
@@ -21,9 +26,10 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
     "laravel-vite-plugin": "^3.0.0",
+    "oxfmt": "^0.41.0",
+    "oxlint": "^1.56.0",
     "sass": "^1.54.5",
     "tailwindcss": "^4.1.11",
     "vite": "^8.0.0"
-  },
-  "type": "module"
+  }
 }
