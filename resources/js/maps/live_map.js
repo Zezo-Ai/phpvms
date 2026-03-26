@@ -214,7 +214,7 @@ export default (_opts) => {
         if (!pannedToFlight) {
           try {
             map.panTo(layerFlights.getBounds().getCenter());
-          } catch  {
+          } catch {
             map.panTo(centerCoords);
           }
         }

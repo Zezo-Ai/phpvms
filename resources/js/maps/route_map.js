@@ -68,10 +68,7 @@ export default (_opts) => {
       fillOpacity: 0.8,
     });
 
-  
-
   const map = draw_base_map(opts);
-  
 
   if (opts.metar_wms.url !== "") {
     addWMSLayer(map, opts.metar_wms);
