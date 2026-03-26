@@ -90,7 +90,10 @@ jobs:
           cache: "npm"
 
       - name: Install NPM dependencies
-        run: npm install
+        run: |
+          npm install
+          npm run fmt config/version.yml
+        # Need to lint version.yml since it’s updated in CI
 
       - name: Lint & Format Check
         run: npm run lint && npm run fmt:check
