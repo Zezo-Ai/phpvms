@@ -3,10 +3,10 @@
 namespace App\Filament\Actions;
 
 use App\Models\Aircraft;
+use App\Models\Airport;
 use App\Models\Enums\ImportExportType;
 use App\Models\Fare;
 use App\Models\Subfleet;
-use App\Repositories\AirportRepository;
 use App\Repositories\ExpenseRepository;
 use App\Repositories\FlightRepository;
 use App\Services\ExportService;
@@ -48,7 +48,7 @@ class ExportAction extends Action
                     $path = $exportSvc->exportAircraft($data);
                     break;
                 case ImportExportType::AIRPORT:
-                    $data = app(AirportRepository::class)->all();
+                    $data = Airport::all();
                     $path = $exportSvc->exportAirports($data);
                     break;
                 case ImportExportType::EXPENSES:

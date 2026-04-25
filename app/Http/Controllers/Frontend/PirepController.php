@@ -17,7 +17,6 @@ use App\Models\PirepField;
 use App\Models\SimBrief;
 use App\Models\User;
 use App\Repositories\AirlineRepository;
-use App\Repositories\AirportRepository;
 use App\Repositories\Criteria\WhereCriteria;
 use App\Repositories\FlightRepository;
 use App\Repositories\PirepRepository;
@@ -44,7 +43,6 @@ class PirepController extends Controller
 {
     public function __construct(
         private readonly AirlineRepository $airlineRepo,
-        private readonly AirportRepository $airportRepo,
         private readonly FareService $fareSvc,
         private readonly FlightRepository $flightRepo,
         private readonly GeoService $geoSvc,
@@ -289,7 +287,7 @@ class PirepController extends Controller
             'read_only'     => false,
             'airline_list'  => $this->airlineRepo->selectBoxList(true),
             'aircraft_list' => $aircraft_list,
-            'airport_list'  => [], // $this->airportRepo->selectBoxList(true),
+            'airport_list'  => [],
             'pirep_fields'  => PirepField::whereIn('pirep_source', [$pirep_source, PirepFieldSource::BOTH])->get(),
             'field_values'  => [],
             'fare_values'   => $fare_values,

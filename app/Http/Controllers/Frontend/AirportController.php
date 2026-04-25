@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Contracts\Controller;
-use App\Repositories\AirportRepository;
+use App\Models\Airport;
 use App\Repositories\FlightRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +13,6 @@ use Laracasts\Flash\Flash;
 class AirportController extends Controller
 {
     public function __construct(
-        private readonly AirportRepository $airportRepo,
         private readonly FlightRepository $flightRepo
     ) {}
 
@@ -36,7 +35,7 @@ class AirportController extends Controller
             },
         ];
 
-        $airport = $this->airportRepo->with('files')->where('id', $id)->first();
+        $airport = Airport::with('files')->find($id);
         if (!$airport) {
             Flash::error('Airport not found!');
 
