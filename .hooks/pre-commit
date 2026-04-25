@@ -22,8 +22,8 @@ if [ -x "$PHP_BINARY" ]; then
     fi
     if [ -n "$oxlint_files" ]; then
         echo "Running oxlint and oxfmt..."
-        npm run lint $oxlint_files
-        npm run fmt $oxlint_files
+        npm run lint -- $oxlint_files
+        npm run fmt -- $oxlint_files
         git add $oxlint_files
     fi
 else
@@ -46,8 +46,8 @@ else
         fi
         if [ -n "$oxlint_files" ]; then
             echo "Running oxlint and oxfmt..."
-            ./vendor/bin/sail npm run lint $oxlint_files
-            ./vendor/bin/sail npm run fmt $oxlint_files
+            ./vendor/bin/sail npm run lint -- $oxlint_files
+            ./vendor/bin/sail npm run fmt -- $oxlint_files
             git add $oxlint_files
         fi
     else
