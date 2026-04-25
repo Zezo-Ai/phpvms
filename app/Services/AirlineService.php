@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\Contracts\Service;
 use App\Models\Airline;
+use App\Models\Subfleet;
 use App\Repositories\AirlineRepository;
 use App\Repositories\FlightRepository;
 use App\Repositories\PirepRepository;
-use App\Repositories\SubfleetRepository;
 use Prettus\Validator\Exceptions\ValidatorException;
 
 class AirlineService extends Service
@@ -15,8 +15,7 @@ class AirlineService extends Service
     public function __construct(
         private readonly AirlineRepository $airlineRepo,
         private readonly FlightRepository $flightRepo,
-        private readonly PirepRepository $pirepRepo,
-        private readonly SubfleetRepository $subfleetRepo
+        private readonly PirepRepository $pirepRepo
     ) {}
 
     /**
@@ -39,20 +38,16 @@ class AirlineService extends Service
      */
     public function canDeleteAirline(Airline $airline): bool
     {
-        // Check these asset counts in these repositories
-        $repos = [
-            $this->pirepRepo,
-            $this->flightRepo,
-            $this->subfleetRepo,
-        ];
-
         $w = ['airline_id' => $airline->id];
-        foreach ($repos as $repo) {
-            if ($repo->count($w) > 0) {
-                return false;
-            }
+
+        if ($this->pirepRepo->count($w) > 0) {
+            return false;
         }
 
-        return true;
+        if ($this->flightRepo->count($w) > 0) {
+            return false;
+        }
+
+        return !Subfleet::where('airline_id', $airline->id)->exists();
     }
 }

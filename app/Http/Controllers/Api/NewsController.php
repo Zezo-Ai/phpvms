@@ -15,9 +15,14 @@ class NewsController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        $limit = $request->query('limit')
+            ? (int) $request->query('limit')
+            : config('repository.pagination.limit', 50);
+
         $news = News::with('user')
             ->latest()
-            ->paginate();
+            ->paginate($limit)
+            ->appends($request->except(['page', 'user']));
 
         return NewsResource::collection($news);
     }

@@ -7,6 +7,7 @@ use App\Events\UserStateChanged;
 use App\Events\UserStatsChanged;
 use App\Exceptions\PilotIdNotFound;
 use App\Exceptions\UserPilotIdExists;
+use App\Models\Aircraft;
 use App\Models\Airline;
 use App\Models\Bid;
 use App\Models\Enums\PirepState;
@@ -18,9 +19,7 @@ use App\Models\Subfleet;
 use App\Models\Typerating;
 use App\Models\User;
 use App\Models\UserFieldValue;
-use App\Repositories\AircraftRepository;
 use App\Repositories\AirlineRepository;
-use App\Repositories\SubfleetRepository;
 use App\Repositories\UserRepository;
 use App\Support\Units\Time;
 use App\Support\Utils;
@@ -30,16 +29,15 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class UserService extends Service
 {
     public function __construct(
-        private readonly AircraftRepository $aircraftRepo,
         private readonly AirlineRepository $airlineRepo,
         private readonly FareService $fareSvc,
-        private readonly SubfleetRepository $subfleetRepo,
         private readonly UserRepository $userRepo
     ) {}
 
@@ -298,10 +296,10 @@ class UserService extends Service
      * Return the subfleets this user is allowed access to,
      * based on their current Rank and/or by Type Rating
      *
-     *
-     * @return Collection<int, Subfleet>
+     * @param  int|null                                                      $perPage Page size when paginating; null uses Laravel's default
+     * @return LengthAwarePaginator<int, Subfleet>|Collection<int, Subfleet>
      */
-    public function getAllowableSubfleets($user, bool $paginate = false)
+    public function getAllowableSubfleets($user, bool $paginate = false, ?int $perPage = null)
     {
         $restrict_rank = setting('pireps.restrict_aircraft_to_rank', true);
         $restrict_type = setting('pireps.restrict_aircraft_to_typerating', false);
@@ -323,18 +321,22 @@ class UserService extends Service
             $restrict_type = false;
         }
 
-        $subfleetsQuery = $this->subfleetRepo->when($restrict_rank || $restrict_type, function ($query) use ($restricted_to) {
+        $subfleetsQuery = Subfleet::when($restrict_rank || $restrict_type, function ($query) use ($restricted_to) {
             return $query->whereIn('id', $restricted_to);
         })->with(['aircraft', 'aircraft.bid', 'fares']);
 
-        $subfleets = $paginate ? $subfleetsQuery->paginate() : $subfleetsQuery->get();
-
-        // Map the subfleets with the proper fare information
-        return $subfleets->transform(function ($sf, $key) {
+        $mapper = function (Subfleet $sf): Subfleet {
+            // @phpstan-ignore-next-line
             $sf->fares = $this->fareSvc->getForSubfleet($sf);
 
             return $sf;
-        });
+        };
+
+        // through() preserves the paginator wrapper (links + meta);
+        // transform() on a non-paginated collection mutates it in place.
+        return $paginate
+            ? $subfleetsQuery->paginate($perPage)->through($mapper)
+            : $subfleetsQuery->get()->transform($mapper);
     }
 
     /**
@@ -345,7 +347,7 @@ class UserService extends Service
      */
     public function aircraftAllowed($user, $aircraft_id)
     {
-        $aircraft = $this->aircraftRepo->find($aircraft_id, ['subfleet_id']);
+        $aircraft = Aircraft::findOrFail($aircraft_id, ['subfleet_id']);
         $subfleets = $this->getAllowableSubfleets($user);
         $subfleet_ids = $subfleets->pluck('id')->toArray();
 

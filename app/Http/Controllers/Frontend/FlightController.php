@@ -7,12 +7,12 @@ use App\Models\Aircraft;
 use App\Models\Bid;
 use App\Models\Enums\FlightType;
 use App\Models\Flight;
+use App\Models\Subfleet;
 use App\Models\Typerating;
 use App\Models\User;
 use App\Repositories\AirlineRepository;
 use App\Repositories\Criteria\WhereCriteria;
 use App\Repositories\FlightRepository;
-use App\Repositories\SubfleetRepository;
 use App\Repositories\UserRepository;
 use App\Services\FlightService;
 use App\Services\GeoService;
@@ -37,7 +37,6 @@ class FlightController extends Controller
         private readonly FlightService $flightSvc,
         private readonly GeoService $geoSvc,
         private readonly ModuleService $moduleSvc,
-        private readonly SubfleetRepository $subfleetRepo,
         private readonly UserRepository $userRepo,
         private readonly UserService $userSvc
     ) {}
@@ -168,7 +167,7 @@ class FlightController extends Controller
             'airports'      => [],
             'flights'       => $flights,
             'saved'         => $saved_flights,
-            'subfleets'     => $this->subfleetRepo->selectBoxList(true),
+            'subfleets'     => $this->subfleetSelectBoxList(true),
             'flight_number' => $request->input('flight_number'),
             'flight_types'  => $flight_types,
             'flight_type'   => $request->input('flight_type'),
@@ -212,7 +211,7 @@ class FlightController extends Controller
             'airports'      => [],
             'flights'       => $flights,
             'saved'         => $saved_flights,
-            'subfleets'     => $this->subfleetRepo->selectBoxList(true),
+            'subfleets'     => $this->subfleetSelectBoxList(true),
             'simbrief'      => !empty(setting('simbrief.api_key')),
             'simbrief_bids' => setting('simbrief.only_bids'),
             'acars_plugin'  => $this->moduleSvc->isModuleActive('VMSAcars'),
@@ -267,5 +266,28 @@ class FlightController extends Controller
             'bid'          => $bid,
             'acars_plugin' => $this->moduleSvc->isModuleActive('VMSAcars'),
         ]);
+    }
+
+    /**
+     * Build a [id => "Name | ICAO"] options map for subfleet select boxes.
+     * Ported from the deleted SubfleetRepository::selectBoxList().
+     */
+    private function subfleetSelectBoxList(bool $add_blank = false): array
+    {
+        $retval = [];
+        $items = Subfleet::with('airline')->get();
+
+        if ($add_blank) {
+            $retval[''] = '';
+        }
+
+        foreach ($items as $i) {
+            // airline_id is nullable on Subfleet, so guard against an
+            // orphan/soft-deleted airline before reading icao.
+            $icao = $i->airline === null ? '—' : $i->airline->icao;
+            $retval[$i->id] = $i->name.' | '.$icao;
+        }
+
+        return $retval;
     }
 }
