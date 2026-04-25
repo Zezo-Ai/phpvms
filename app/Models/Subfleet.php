@@ -4,8 +4,10 @@ namespace App\Models;
 
 use App\Contracts\Model;
 use App\Models\Enums\AircraftStatus;
+use App\Models\Observers\SubfleetObserver;
 use App\Models\Traits\ExpensableTrait;
 use App\Models\Traits\FilesTrait;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -83,6 +85,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  *
  * @mixin \Eloquent
  */
+#[ObservedBy(SubfleetObserver::class)]
 class Subfleet extends Model
 {
     use ExpensableTrait;
@@ -108,25 +111,6 @@ class Subfleet extends Model
     ];
 
     public $table = 'subfleets';
-
-    public $casts = [
-        'airline_id'                 => 'integer',
-        'turn_time'                  => 'integer',
-        'cost_block_hour'            => 'float',
-        'cost_delay_minute'          => 'float',
-        'fuel_type'                  => 'integer',
-        'ground_handling_multiplier' => 'float',
-        'cargo_capacity'             => 'float',
-        'fuel_capacity'              => 'float',
-        'gross_weight'               => 'float',
-    ];
-
-    public static array $rules = [
-        'type'                       => 'required',
-        'name'                       => 'required',
-        'hub_id'                     => 'nullable',
-        'ground_handling_multiplier' => 'nullable|numeric',
-    ];
 
     public $sortable = [
         'id',
@@ -208,5 +192,23 @@ class Subfleet extends Model
             'subfleet_id',
             'typerating_id'
         );
+    }
+
+    /**
+     * The attributes that should be cast to native types.
+     */
+    protected function casts(): array
+    {
+        return [
+            'airline_id'                 => 'integer',
+            'turn_time'                  => 'integer',
+            'cost_block_hour'            => 'float',
+            'cost_delay_minute'          => 'float',
+            'fuel_type'                  => 'integer',
+            'ground_handling_multiplier' => 'float',
+            'cargo_capacity'             => 'float',
+            'fuel_capacity'              => 'float',
+            'gross_weight'               => 'float',
+        ];
     }
 }

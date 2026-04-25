@@ -6,13 +6,12 @@ use App\Contracts\Service;
 use App\Models\Acars;
 use App\Models\Enums\AcarsType;
 use App\Models\Flight;
+use App\Models\Navdata;
 use App\Models\Pirep;
 use App\Repositories\AcarsRepository;
-use App\Repositories\NavdataRepository;
 use App\Support\GeoJson;
 use Exception;
 use GeoJson\Feature\FeatureCollection;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use League\Geotools\Coordinate\Coordinate;
@@ -28,7 +27,6 @@ class GeoService extends Service
      */
     public function __construct(
         private readonly AcarsRepository $acarsRepo,
-        private readonly NavdataRepository $navRepo
     ) {}
 
     /**
@@ -89,9 +87,7 @@ class GeoService extends Service
             Log::debug('Looking for '.$route_point);
 
             try {
-                $points = $this->navRepo->findWhere(['id' => $route_point]);
-            } catch (ModelNotFoundException $e) {
-                continue;
+                $points = Navdata::where('id', $route_point)->get();
             } catch (Exception $e) {
                 Log::error($e);
 

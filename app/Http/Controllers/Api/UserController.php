@@ -11,10 +11,10 @@ use App\Http\Resources\Bid as BidResource;
 use App\Http\Resources\Pirep as PirepResource;
 use App\Http\Resources\Subfleet as SubfleetResource;
 use App\Http\Resources\User as UserResource;
+use App\Models\Aircraft;
 use App\Models\Bid;
 use App\Models\Enums\PirepState;
 use App\Models\User;
-use App\Repositories\AircraftRepository;
 use App\Repositories\Criteria\WhereCriteria;
 use App\Repositories\FlightRepository;
 use App\Repositories\PirepRepository;
@@ -96,7 +96,7 @@ class UserController extends Controller
             $flight_id = $request->input('flight_id');
             if (setting('bids.block_aircraft')) {
                 $aircraft_id = $request->input('aircraft_id');
-                $aircraft = app(AircraftRepository::class)->findWithoutFail($aircraft_id);
+                $aircraft = Aircraft::find($aircraft_id);
             }
             $flight = $this->flightRepo->find($flight_id);
             $bid = $this->bidSvc->addBid($flight, $user, $aircraft ?? null);
@@ -162,7 +162,12 @@ class UserController extends Controller
             throw new UserNotFound();
         }
 
-        $subfleets = $this->userSvc->getAllowableSubfleets($user, true);
+        $perPage = $request->query('limit')
+            ? (int) $request->query('limit')
+            : config('repository.pagination.limit', 50);
+
+        $subfleets = $this->userSvc->getAllowableSubfleets($user, true, $perPage)
+            ->appends($request->except(['page', 'user']));
 
         return SubfleetResource::collection($subfleets);
     }

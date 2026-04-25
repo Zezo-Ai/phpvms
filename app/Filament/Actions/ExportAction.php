@@ -2,13 +2,13 @@
 
 namespace App\Filament\Actions;
 
+use App\Models\Aircraft;
 use App\Models\Enums\ImportExportType;
 use App\Models\Fare;
-use App\Repositories\AircraftRepository;
+use App\Models\Subfleet;
 use App\Repositories\AirportRepository;
 use App\Repositories\ExpenseRepository;
 use App\Repositories\FlightRepository;
-use App\Repositories\SubfleetRepository;
 use App\Services\ExportService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\CanCustomizeProcess;
@@ -44,7 +44,7 @@ class ExportAction extends Action
 
             switch ($arguments['exportType']) {
                 case ImportExportType::AIRCRAFT:
-                    $data = app(AircraftRepository::class)->orderBy('registration')->get();
+                    $data = Aircraft::orderBy('registration')->get();
                     $path = $exportSvc->exportAircraft($data);
                     break;
                 case ImportExportType::AIRPORT:
@@ -64,7 +64,7 @@ class ExportAction extends Action
                     $path = $exportSvc->exportFlights($data);
                     break;
                 case ImportExportType::SUBFLEETS:
-                    $data = app(SubfleetRepository::class)->all();
+                    $data = Subfleet::all();
                     $path = $exportSvc->exportSubfleets($data);
                     break;
             }
