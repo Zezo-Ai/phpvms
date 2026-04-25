@@ -187,7 +187,7 @@ class UserController extends Controller
         $this->pirepRepo->pushCriteria(new WhereCriteria($request, $where));
 
         $pireps = $this->pirepRepo
-            ->with(['airline', 'dpt_airport', 'arr_airport'])
+            ->with(['aircraft', 'airline', 'dpt_airport', 'arr_airport'])
             ->orderBy('created_at', 'desc')
             ->paginate();
 
@@ -209,7 +209,7 @@ class UserController extends Controller
             'json'     => 'v2',
         ]);
 
-        if ($response->failed() || $response->json('fetch.status') === 'Error: Unknown UserID') {
+        if ($response->serverError() || $response->json('fetch.status') === 'Error: Unknown UserID') {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid SimBrief username provided.',
