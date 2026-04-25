@@ -11,10 +11,10 @@ use App\Models\Enums\PirepState;
 use App\Models\Enums\PirepStatus;
 use App\Models\Flight;
 use App\Models\FlightFieldValue;
+use App\Models\Navdata;
 use App\Models\Subfleet;
 use App\Models\User;
 use App\Repositories\FlightRepository;
-use App\Repositories\NavdataRepository;
 use App\Repositories\PirepRepository;
 use App\Support\Units\Time;
 use Exception;
@@ -27,7 +27,6 @@ class FlightService extends Service
     public function __construct(
         private readonly AirportService $airportSvc,
         private readonly FlightRepository $flightRepo,
-        private readonly NavdataRepository $navDataRepo,
         private readonly PirepRepository $pirepRepo,
         private readonly UserService $userSvc
     ) {}
@@ -279,7 +278,7 @@ class FlightService extends Service
 
         $route_points = array_map('strtoupper', explode(' ', $flight->route));
 
-        $route = $this->navDataRepo->findWhereIn('id', $route_points);
+        $route = Navdata::whereIn('id', $route_points)->get();
 
         // Put it back into the original order the route is in
         $return_points = [];

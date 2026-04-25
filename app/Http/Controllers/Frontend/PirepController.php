@@ -6,6 +6,7 @@ use App\Contracts\Controller;
 use App\Filament\Resources\Pireps\PirepResource;
 use App\Http\Requests\CreatePirepRequest;
 use App\Http\Requests\UpdatePirepRequest;
+use App\Models\Aircraft;
 use App\Models\Enums\PirepFieldSource;
 use App\Models\Enums\PirepSource;
 use App\Models\Enums\PirepState;
@@ -15,7 +16,6 @@ use App\Models\PirepFare;
 use App\Models\PirepField;
 use App\Models\SimBrief;
 use App\Models\User;
-use App\Repositories\AircraftRepository;
 use App\Repositories\AirlineRepository;
 use App\Repositories\AirportRepository;
 use App\Repositories\Criteria\WhereCriteria;
@@ -43,7 +43,6 @@ use Prettus\Validator\Exceptions\ValidatorException;
 class PirepController extends Controller
 {
     public function __construct(
-        private readonly AircraftRepository $aircraftRepo,
         private readonly AirlineRepository $airlineRepo,
         private readonly AirportRepository $airportRepo,
         private readonly FareService $fareSvc,
@@ -228,7 +227,7 @@ class PirepController extends Controller
     public function fares(Request $request): View
     {
         $aircraft_id = $request->input('aircraft_id');
-        $aircraft = $this->aircraftRepo->find($aircraft_id);
+        $aircraft = Aircraft::findOrFail($aircraft_id);
 
         return view('pireps.fares', [
             'aircraft'  => $aircraft,
@@ -343,7 +342,7 @@ class PirepController extends Controller
             // is the aircraft in the right place?
             /* @noinspection NotOptimalIfConditionsInspection */
             // Get the aircraft
-            $aircraft = $this->aircraftRepo->findWithoutFail($pirep->aircraft_id);
+            $aircraft = Aircraft::find($pirep->aircraft_id);
             if ($aircraft === null) {
                 Log::error('Aircraft for PIREP not found, id='.$pirep->aircraft_id);
 

@@ -34,7 +34,6 @@ use App\Models\PirepFieldValue;
 use App\Models\SimBrief;
 use App\Models\User;
 use App\Notifications\Messages\Broadcast\PirepDiverted;
-use App\Repositories\AircraftRepository;
 use App\Repositories\AirportRepository;
 use App\Repositories\FlightRepository;
 use App\Repositories\PirepRepository;
@@ -54,7 +53,6 @@ class PirepService extends Service
     public function __construct(
         private readonly AirportRepository $airportRepo,
         private readonly AirportService $airportSvc,
-        private readonly AircraftRepository $aircraftRepo,
         private readonly FareService $fareSvc,
         private readonly FlightRepository $flightRepo,
         private readonly GeoService $geoSvc,
@@ -120,14 +118,14 @@ class PirepService extends Service
 
         // See if this aircraft is valid
         /** @var ?Aircraft $aircraft */
-        $aircraft = $this->aircraftRepo->findWithoutFail($pirep->aircraft_id);
+        $aircraft = Aircraft::find($pirep->aircraft_id);
         if ($aircraft === null) {
             throw new AircraftInvalid($aircraft);
         }
 
         // See if this aircraft is available for flight
         /** @var ?Aircraft $aircraft */
-        $aircraft = $this->aircraftRepo->where('id', $pirep->aircraft_id)->where('state', AircraftState::PARKED)->first();
+        $aircraft = Aircraft::where('id', $pirep->aircraft_id)->where('state', AircraftState::PARKED)->first();
         if ($aircraft === null) {
             throw new AircraftNotAvailable($pirep->aircraft);
         }
