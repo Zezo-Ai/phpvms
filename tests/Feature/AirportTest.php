@@ -2,6 +2,7 @@
 
 use App\Exceptions\AirportNotFound;
 use App\Models\Airport;
+use App\Models\User;
 use App\Repositories\AirportRepository;
 use App\Services\AirportService;
 
@@ -112,4 +113,62 @@ it('throws exception when origin airport is missing', function () {
 
     expect(fn () => app(AirportService::class)->calculateDistance('KJFK', 'KLAX'))
         ->toThrow(AirportNotFound::class);
+});
+
+test('airport list filters to hubs when ?hub=true', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->count(3)->create(['hub' => false]);
+    Airport::factory()->create(['icao' => 'KORD', 'hub' => true]);
+    Airport::factory()->create(['icao' => 'KJFK', 'hub' => true]);
+
+    $response = $this->get('/api/airports?hub=1');
+    $response->assertOk();
+
+    $icaos = collect($response->json('data'))->pluck('icao')->all();
+    expect($icaos)->toContain('KORD', 'KJFK')
+        ->and(count($icaos))->toBe(2);
+});
+
+test('airport search filters to hubs when ?hubs=true', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->count(3)->create(['hub' => false, 'name' => 'Test Airport']);
+    Airport::factory()->create(['icao' => 'KORD', 'hub' => true, 'name' => 'Hub Airport']);
+
+    $response = $this->get('/api/airports/search?hubs=1');
+    $response->assertOk();
+
+    $hubs = collect($response->json('data'))->pluck('icao')->all();
+    expect($hubs)->toEqual(['KORD']);
+});
+
+test('airport list orders by icao ascending by default', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    foreach (['KZZZ', 'KAAA', 'KMMM'] as $icao) {
+        Airport::factory()->create(['id' => $icao, 'icao' => $icao]);
+    }
+
+    $response = $this->get('/api/airports');
+    $response->assertOk();
+
+    $order = collect($response->json('data'))->pluck('icao')->all();
+    expect($order)->toBe(['KAAA', 'KMMM', 'KZZZ']);
+});
+
+test('airport list honors ?limit query param', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->count(8)->create();
+
+    $response = $this->get('/api/airports?limit=3');
+    $response->assertOk();
+
+    expect($response->json('data'))->toHaveCount(3)
+        ->and($response->json('meta.per_page'))->toBe(3);
 });
