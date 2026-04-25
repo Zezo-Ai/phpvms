@@ -3,7 +3,6 @@
 use App\Exceptions\AirportNotFound;
 use App\Models\Airport;
 use App\Models\User;
-use App\Repositories\AirportRepository;
 use App\Services\AirportService;
 
 it('can create an airport from api response', function () {
@@ -82,10 +81,9 @@ it('returns cached data if available', function () {
 it('creates a generic airport if auto_lookup is disabled', function () {
     Config::set('general.auto_airport_lookup', false);
 
-    // Partial mock the repository so the service uses our mock instead of the real DB
-    $this->mock(AirportRepository::class, function ($mock) {
-        $mock->shouldReceive('findWithoutFail')->andReturn(null);
-    });
+    // KORD does not exist in DB; lookupAirportIfNotFound returns null from
+    // Airport::find(), then creates a generic airport row.
+    expect(Airport::find('KORD'))->toBeNull();
 
     $result = app(AirportService::class)->lookupAirportIfNotFound('KORD');
 
@@ -94,12 +92,18 @@ it('creates a generic airport if auto_lookup is disabled', function () {
 });
 
 it('calculates distance between two known points', function () {
-    $this->mock(AirportRepository::class, function ($mock) {
-        $mock->shouldReceive('find')->with('KJFK', ['lat', 'lon'])
-            ->andReturn((object) ['lat' => 40.6413, 'lon' => -73.7781]);
-        $mock->shouldReceive('find')->with('KLAX', ['lat', 'lon'])
-            ->andReturn((object) ['lat' => 33.9416, 'lon' => -118.4085]);
-    });
+    Airport::factory()->create([
+        'id'   => 'KJFK',
+        'icao' => 'KJFK',
+        'lat'  => 40.6413,
+        'lon'  => -73.7781,
+    ]);
+    Airport::factory()->create([
+        'id'   => 'KLAX',
+        'icao' => 'KLAX',
+        'lat'  => 33.9416,
+        'lon'  => -118.4085,
+    ]);
 
     $distance = app(AirportService::class)->calculateDistance('KJFK', 'KLAX');
 
@@ -107,10 +111,7 @@ it('calculates distance between two known points', function () {
 });
 
 it('throws exception when origin airport is missing', function () {
-    $this->mock(AirportRepository::class, function ($mock) {
-        $mock->shouldReceive('find')->andReturn(null);
-    });
-
+    // No airports in DB → Airport::find returns null → throws AirportNotFound.
     expect(fn () => app(AirportService::class)->calculateDistance('KJFK', 'KLAX'))
         ->toThrow(AirportNotFound::class);
 });
