@@ -15,7 +15,7 @@ trait RefreshDatabase
     {
         $this->artisan('migrate:fresh', array_merge(
             $this->migrateFreshUsing(),
-            ['--database' => TestCase::TEST_DATABASE_CONNECTION],
+            ['--database' => TestCase::TEST_DATABASE_CONNECTION, '--force' => true],
         ));
     }
 }
