@@ -52,7 +52,7 @@ class AirportSearchQueryV1
         }
 
         if (array_key_exists('hubs', $data) && get_truth_state($data['hubs'])) {
-            $query->byHub();
+            $query->where('hub', true);
         }
     }
 
