@@ -13,14 +13,10 @@ declare(strict_types=1);
 |
 */
 
-use App\Services\Installer\SeederService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\RefreshDatabase;
 use Tests\TestCase;
 
 pest()
     ->extend(TestCase::class)
     ->use(RefreshDatabase::class)
-    ->beforeEach(function (): void {
-        app(SeederService::class)->syncAllSettings();
-    })
     ->in('Unit', 'Feature', 'Arch', '../resources/views');

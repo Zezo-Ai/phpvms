@@ -24,17 +24,44 @@ test('SearchAirportsRequest passes with field-specific search syntax', function 
     expect(validateSearchAirports(['search' => 'icao:e'])->passes())->toBeTrue();
 });
 
+test('SearchAirportsRequest passes with legacy searchFields and searchJoin params', function () {
+    expect(validateSearchAirports([
+        'search'       => 'JFK',
+        'searchFields' => 'icao:like;name',
+        'searchJoin'   => 'and',
+    ])->passes())->toBeTrue();
+});
+
 test('SearchAirportsRequest passes with hub flag', function () {
     expect(validateSearchAirports(['hub' => '1'])->passes())->toBeTrue();
     expect(validateSearchAirports(['hubs' => 'true'])->passes())->toBeTrue();
 });
 
-test('SearchAirportsRequest passes with valid orderBy', function () {
+test('SearchAirportsRequest passes with legacy single-column orderBy', function () {
     expect(validateSearchAirports(['orderBy' => 'icao', 'sortedBy' => 'asc'])->passes())->toBeTrue();
 });
 
+test('SearchAirportsRequest passes with legacy multi-column orderBy', function () {
+    expect(validateSearchAirports([
+        'orderBy'  => 'country;icao',
+        'sortedBy' => 'asc;desc',
+    ])->passes())->toBeTrue();
+});
+
+test('SearchAirportsRequest passes with additional legacy sortable columns', function () {
+    expect(validateSearchAirports(['orderBy' => 'notes'])->passes())->toBeTrue();
+});
+
+test('SearchAirportsRequest rejects searchFields on disallowed column', function () {
+    expect(validateSearchAirports(['searchFields' => 'notes'])->fails())->toBeTrue();
+});
+
+test('SearchAirportsRequest rejects searchFields on disallowed operator', function () {
+    expect(validateSearchAirports(['searchFields' => 'icao:between'])->fails())->toBeTrue();
+});
+
 test('SearchAirportsRequest rejects orderBy on disallowed column', function () {
-    expect(validateSearchAirports(['orderBy' => 'notes'])->fails())->toBeTrue();
+    expect(validateSearchAirports(['orderBy' => 'continent'])->fails())->toBeTrue();
 });
 
 test('SearchAirportsRequest rejects sortedBy outside asc/desc', function () {

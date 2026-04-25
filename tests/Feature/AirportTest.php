@@ -4,6 +4,8 @@ use App\Exceptions\AirportNotFound;
 use App\Models\Airport;
 use App\Models\User;
 use App\Services\AirportService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 
 it('can create an airport from api response', function () {
     // This is the response from the API
@@ -144,6 +146,76 @@ test('airport search filters to hubs when ?hubs=true', function () {
 
     $hubs = collect($response->json('data'))->pluck('icao')->all();
     expect($hubs)->toEqual(['KORD']);
+});
+
+test('airport list filters to non-hubs when ?hub=0', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->create(['icao' => 'KJFK', 'hub' => true]);
+    Airport::factory()->create(['icao' => 'KORD', 'hub' => false]);
+    Airport::factory()->create(['icao' => 'KLAX', 'hub' => false]);
+
+    $response = $this->get('/api/airports?hub=0');
+    $response->assertOk();
+
+    expect(collect($response->json('data'))->pluck('icao')->all())->toBe(['KLAX', 'KORD']);
+});
+
+test('airport search respects legacy searchFields param', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->create(['id' => 'KJFK', 'icao' => 'KJFK', 'iata' => 'AAA', 'name' => 'Alpha']);
+    Airport::factory()->create(['id' => 'EGAA', 'icao' => 'EGAA', 'iata' => 'JFK', 'name' => 'Bravo']);
+    Airport::factory()->create(['id' => 'KORD', 'icao' => 'KORD', 'iata' => 'ORD', 'name' => 'JFK Terminal']);
+
+    $response = $this->get('/api/airports/search?search=JFK&searchFields=icao:like');
+    $response->assertOk();
+
+    expect(collect($response->json('data'))->pluck('icao')->all())->toBe(['KJFK']);
+});
+
+test('airport search defaults multi-field search to OR', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->create(['id' => 'KJFK', 'icao' => 'KJFK', 'name' => 'Kennedy International']);
+    Airport::factory()->create(['id' => 'KORD', 'icao' => 'KORD', 'name' => 'OHare International']);
+    Airport::factory()->create(['id' => 'EGLL', 'icao' => 'EGLL', 'name' => 'Heathrow']);
+
+    $response = $this->get('/api/airports/search?search=icao:K;name:Heathrow');
+    $response->assertOk();
+
+    expect(collect($response->json('data'))->pluck('icao')->all())->toBe(['EGLL', 'KJFK', 'KORD']);
+});
+
+test('airport search supports searchJoin=and', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->create(['id' => 'KJFK', 'icao' => 'KJFK', 'name' => 'Kennedy International']);
+    Airport::factory()->create(['id' => 'KORD', 'icao' => 'KORD', 'name' => 'OHare International']);
+    Airport::factory()->create(['id' => 'EGLL', 'icao' => 'EGLL', 'name' => 'Kennedy International']);
+
+    $response = $this->get('/api/airports/search?search=icao:K;name:Kennedy&searchJoin=and');
+    $response->assertOk();
+
+    expect(collect($response->json('data'))->pluck('icao')->all())->toBe(['KJFK']);
+});
+
+test('airport list honors legacy multi-column sort syntax', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->create(['id' => 'KJFK', 'icao' => 'KJFK', 'country' => 'US']);
+    Airport::factory()->create(['id' => 'EGAA', 'icao' => 'EGAA', 'country' => 'UK']);
+    Airport::factory()->create(['id' => 'EGLL', 'icao' => 'EGLL', 'country' => 'UK']);
+
+    $response = $this->get('/api/airports?orderBy=country;icao&sortedBy=asc;desc');
+    $response->assertOk();
+
+    expect(collect($response->json('data'))->pluck('icao')->all())->toBe(['EGLL', 'EGAA', 'KJFK']);
 });
 
 test('airport list orders by icao ascending by default', function () {
