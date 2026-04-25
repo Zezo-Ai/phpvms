@@ -172,3 +172,71 @@ test('airport list honors ?limit query param', function () {
     expect($response->json('data'))->toHaveCount(3)
         ->and($response->json('meta.per_page'))->toBe(3);
 });
+
+test('GET /api/airports/{airport} resolves lowercase ICAO via route binding', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->create(['id' => 'KJFK', 'icao' => 'KJFK']);
+
+    $response = $this->get('/api/airports/kjfk');
+
+    $response->assertOk();
+    expect($response->json('data.icao'))->toBe('KJFK');
+});
+
+it('preserves ?limit= and ?hub= in /api/airports pagination metadata', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->count(5)->create(['hub' => true]);
+
+    $res = $this->get('/api/airports?limit=2&hub=1');
+    $res->assertSuccessful();
+
+    // Phase 2 precedent: the legacy Repository::paginate() honored
+    // request()->except(['page', 'user']) via ->appends(), forwarding
+    // every query param to meta.next_page. The migration must preserve
+    // this so clients can follow pagination without losing filters.
+    expect($res->json('meta.per_page'))->toEqual(2);
+
+    $next = $res->json('meta.next_page');
+    expect($next)->not->toBeNull()
+        ->and($next)->toContain('limit=2')
+        ->and($next)->toContain('hub=1');
+});
+
+it('preserves ?search= in /api/airports/search pagination metadata', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    foreach (['KAAA', 'KBBB', 'KCCC', 'KDDD', 'KEEE'] as $icao) {
+        Airport::factory()->create(['id' => $icao, 'icao' => $icao]);
+    }
+
+    $res = $this->get('/api/airports/search?search=icao:K&limit=2');
+    $res->assertSuccessful();
+
+    expect($res->json('meta.per_page'))->toEqual(2);
+
+    $next = $res->json('meta.next_page');
+    expect($next)->not->toBeNull()
+        ->and($next)->toContain('limit=2')
+        ->and($next)->toContain('search=icao%3AK');  // URL-encoded colon
+});
+
+it('preserves ?limit= in /api/airports/hubs pagination metadata', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->count(5)->create(['hub' => true]);
+
+    $res = $this->get('/api/airports/hubs?limit=2');
+    $res->assertSuccessful();
+
+    expect($res->json('meta.per_page'))->toEqual(2);
+
+    $next = $res->json('meta.next_page');
+    expect($next)->not->toBeNull()
+        ->and($next)->toContain('limit=2');
+});
