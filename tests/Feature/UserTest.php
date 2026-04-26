@@ -447,18 +447,7 @@ test('pilots list filters to active when hide_inactive is on', function () {
     $response->assertDontSee('PilotRejected');
 });
 
-/*
- * NOTE: The current Frontend UserController::index does NOT push
- * Prettus's RequestCriteria onto the UserRepository, which means the
- * `?search=` query parameter is presently a no-op on /users. The two
- * tests below characterize that current behavior: every user is
- * rendered regardless of the search string. When Phase 4 introduces
- * SearchUsersRequest + UserSearchQuery and wires real search into the
- * /users controller, these tests will need to flip to the assertions
- * described in the original Phase 4 plan (assertSee target,
- * assertDontSee non-target).
- */
-test('pilots list ignores free-text search query (current behavior)', function () {
+test('pilots list filters by free-text search', function () {
     updateSetting('pilots.hide_inactive', false);
 
     User::factory()->create(['name' => 'JohnDoe', 'state' => UserState::ACTIVE]);
@@ -467,12 +456,11 @@ test('pilots list ignores free-text search query (current behavior)', function (
     $response = $this->get('/users?search=JohnDoe');
 
     $response->assertOk();
-    // search is not wired in the front-end controller, so both users render
     $response->assertSee('JohnDoe');
-    $response->assertSee('JaneSmith');
+    $response->assertDontSee('JaneSmith');
 });
 
-test('pilots list ignores field-specific search syntax (current behavior)', function () {
+test('pilots list filters by field-specific search syntax', function () {
     updateSetting('pilots.hide_inactive', false);
 
     User::factory()->create(['name' => 'JohnDoe', 'state' => UserState::ACTIVE]);
@@ -481,9 +469,8 @@ test('pilots list ignores field-specific search syntax (current behavior)', func
     $response = $this->get('/users?search=name:JohnDoe');
 
     $response->assertOk();
-    // search is not wired in the front-end controller, so both users render
     $response->assertSee('JohnDoe');
-    $response->assertSee('BobSmith');
+    $response->assertDontSee('BobSmith');
 });
 
 test('LatestPilots widget excludes deleted users and orders by created_at desc', function () {
