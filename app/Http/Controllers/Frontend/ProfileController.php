@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\UserField;
 use App\Models\UserFieldValue;
 use App\Repositories\AirlineRepository;
-use App\Repositories\UserRepository;
+use App\Services\UserService;
 use App\Support\Countries;
 use App\Support\Timezonelist;
 use App\Support\Utils;
@@ -34,7 +34,7 @@ class ProfileController extends Controller
      */
     public function __construct(
         private readonly AirlineRepository $airlineRepo,
-        private readonly UserRepository $userRepo
+        private readonly UserService $userSvc,
     ) {}
 
     /**
@@ -83,7 +83,7 @@ class ProfileController extends Controller
             return redirect(route('frontend.dashboard.index'));
         }
 
-        $userFields = $this->userRepo->getUserFields($user, true);
+        $userFields = $this->userSvc->getUserFields($user, true);
 
         return view('profile.index', [
             'user'       => $user,
@@ -112,7 +112,7 @@ class ProfileController extends Controller
         $airports = $user->home_airport ? [$user->home_airport->id => $user->home_airport->description] : ['' => ''];
 
         $airlines = $this->airlineRepo->selectBoxList();
-        $userFields = $this->userRepo->getUserFields($user);
+        $userFields = $this->userSvc->getUserFields($user);
 
         return view('profile.edit', [
             'user'       => $user,
@@ -131,7 +131,13 @@ class ProfileController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $id = Auth::user()->id;
-        $user = $this->userRepo->findWithoutFail($id);
+        $user = User::find($id);
+
+        if (!$user) {
+            Flash::error('User not found!');
+
+            return redirect(route('frontend.dashboard.index'));
+        }
 
         $rules = [
             'name'              => 'required',
@@ -185,7 +191,7 @@ class ProfileController extends Controller
             Log::info('Uploading avatar into folder '.public_path('uploads/avatars'));
             $canvas->save(public_path('uploads/avatars/'.$file_name));
 
-            $user->avatar = $path;
+            $user->setAttribute('avatar', $path);
         }
 
         // User needs to verify their new email address
