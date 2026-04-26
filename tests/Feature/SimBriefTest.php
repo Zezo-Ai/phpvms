@@ -2,6 +2,7 @@
 
 use App\Models\Acars;
 use App\Models\Aircraft;
+use App\Models\Airport;
 use App\Models\Enums\AcarsType;
 use App\Models\Enums\FareType;
 use App\Models\Enums\UserState;
@@ -279,6 +280,25 @@ test('attach to pirep', function () {
 
     expect($briefing->flight_id)->toBeEmpty()
         ->and($briefing->pirep_id)->toEqual($pirep->id);
+});
+
+test('simbrief create form preloads selected airports', function () {
+    Airport::factory()->create(['id' => 'OMAA', 'icao' => 'OMAA', 'name' => 'Abu Dhabi International']);
+    Airport::factory()->create(['id' => 'OMDB', 'icao' => 'OMDB', 'name' => 'Dubai International']);
+
+    $userinfo = createUserData();
+    $user = $userinfo['user'];
+    $briefing = loadSimBrief($user, $userinfo['aircraft']->first(), []);
+
+    $response = $this->actingAs($user)->get('/pireps/create?sb_id='.$briefing->id);
+
+    $response->assertOk()
+        ->assertViewHas('airport_list', function (array $airportList): bool {
+            return ($airportList[''] ?? null) === ''
+                && ($airportList['OMAA'] ?? null) === 'OMAA - Abu Dhabi International'
+                && ($airportList['OMDB'] ?? null) === 'OMDB - Dubai International'
+                && count($airportList) === 3;
+        });
 });
 
 test('clear expired briefs', function () {

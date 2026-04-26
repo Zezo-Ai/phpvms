@@ -2,13 +2,11 @@
 
 namespace App\Providers;
 
-use App\Models\Airport;
 use App\Models\Flight;
 use App\Models\FlightField;
 use App\Models\FlightFieldValue;
 use App\Models\Journal;
 use App\Models\JournalTransaction;
-use App\Models\Observers\AirportObserver;
 use App\Models\Observers\FlightObserver;
 use App\Models\Observers\JournalObserver;
 use App\Models\Observers\JournalTransactionObserver;
@@ -26,7 +24,6 @@ class ObserverServiceProviders extends ServiceProvider
 {
     public function boot(): void
     {
-        Airport::observe(AirportObserver::class);
         Journal::observe(JournalObserver::class);
         JournalTransaction::observe(JournalTransactionObserver::class);
 

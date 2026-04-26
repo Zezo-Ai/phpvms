@@ -20,6 +20,7 @@ use App\Exceptions\PirepError;
 use App\Exceptions\UserNotAtAirport;
 use App\Models\Acars;
 use App\Models\Aircraft;
+use App\Models\Airport;
 use App\Models\Enums\AcarsType;
 use App\Models\Enums\AircraftState;
 use App\Models\Enums\FlightType;
@@ -34,7 +35,6 @@ use App\Models\PirepFieldValue;
 use App\Models\SimBrief;
 use App\Models\User;
 use App\Notifications\Messages\Broadcast\PirepDiverted;
-use App\Repositories\AirportRepository;
 use App\Repositories\FlightRepository;
 use App\Repositories\PirepRepository;
 use App\Support\Units\Fuel;
@@ -51,7 +51,6 @@ use Prettus\Validator\Exceptions\ValidatorException;
 class PirepService extends Service
 {
     public function __construct(
-        private readonly AirportRepository $airportRepo,
         private readonly AirportService $airportSvc,
         private readonly FareService $fareSvc,
         private readonly FlightRepository $flightRepo,
@@ -92,12 +91,12 @@ class PirepService extends Service
             $this->airportSvc->lookupAirportIfNotFound($pirep->dpt_airport_id);
             $this->airportSvc->lookupAirportIfNotFound($pirep->arr_airport_id);
         } else {
-            $dptApt = $this->airportRepo->findWithoutFail($pirep->dpt_airport_id);
+            $dptApt = Airport::find($pirep->dpt_airport_id);
             if (!$dptApt) {
                 throw new AirportNotFound($pirep->dpt_airport_id);
             }
 
-            $arrApt = $this->airportRepo->findWithoutFail($pirep->arr_airport_id);
+            $arrApt = Airport::find($pirep->arr_airport_id);
             if (!$arrApt) {
                 throw new AirportNotFound($pirep->arr_airport_id);
             }
@@ -683,7 +682,7 @@ class PirepService extends Service
             return;
         }
 
-        $diversion_airport = $this->airportRepo->findWithoutFail($diversion_airport_id);
+        $diversion_airport = Airport::find($diversion_airport_id);
 
         // Return if diversion airport not found and airport lookup is disabled
         if (!$diversion_airport && !setting('general.auto_airport_lookup', false)) {
