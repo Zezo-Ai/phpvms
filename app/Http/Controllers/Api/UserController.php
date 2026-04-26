@@ -18,7 +18,6 @@ use App\Models\User;
 use App\Repositories\Criteria\WhereCriteria;
 use App\Repositories\FlightRepository;
 use App\Repositories\PirepRepository;
-use App\Repositories\UserRepository;
 use App\Services\BidService;
 use App\Services\UserService;
 use Exception;
@@ -37,7 +36,6 @@ class UserController extends Controller
         private readonly BidService $bidSvc,
         private readonly FlightRepository $flightRepo,
         private readonly PirepRepository $pirepRepo,
-        private readonly UserRepository $userRepo,
         private readonly UserService $userSvc
     ) {}
 
@@ -157,7 +155,7 @@ class UserController extends Controller
      */
     public function fleet(Request $request): AnonymousResourceCollection
     {
-        $user = $this->userRepo->find($this->getUserId($request));
+        $user = User::find($this->getUserId($request));
         if ($user === null) {
             throw new UserNotFound();
         }
