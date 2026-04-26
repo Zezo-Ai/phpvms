@@ -3,12 +3,16 @@
 namespace App\Models;
 
 use App\Models\Enums\JournalType;
+use App\Models\Enums\UserState;
+use App\Models\Observers\UserObserver;
 use App\Models\Traits\JournalTrait;
 use BezhanSalleh\FilamentShield\Support\Utils;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
@@ -150,6 +154,7 @@ use Staudenmeir\EloquentHasManyDeep\HasRelationships;
  *
  * @mixin \Eloquent
  */
+#[ObservedBy(UserObserver::class)]
 class User extends Authenticatable implements FilamentUser, HasAvatar, MustVerifyEmail
 {
     use HasFactory;
@@ -216,13 +221,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, MustVerif
         'last_ip',
         'remember_token',
         'notes',
-    ];
-
-    public static array $rules = [
-        'name'     => 'required',
-        'email'    => 'required|email',
-        'pilot_id' => 'required|integer',
-        'callsign' => 'nullable|max:4',
     ];
 
     public $sortable = [
@@ -459,6 +457,52 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, MustVerif
     public function getFilamentAvatarUrl(): ?string
     {
         return $this->avatar?->url;
+    }
+
+    /**
+     * Filter to currently-active users (state = ACTIVE).
+     */
+    #[Scope]
+    protected function active(Builder $q): Builder
+    {
+        return $q->where('state', UserState::ACTIVE);
+    }
+
+    /**
+     * Filter to pending users (awaiting registration approval).
+     */
+    #[Scope]
+    protected function pending(Builder $q): Builder
+    {
+        return $q->where('state', UserState::PENDING);
+    }
+
+    /**
+     * Filter to users in any specified state.
+     */
+    #[Scope]
+    protected function inState(Builder $q, int $state): Builder
+    {
+        return $q->where('state', $state);
+    }
+
+    /**
+     * Filter to users belonging to a specific airline.
+     */
+    #[Scope]
+    protected function forAirline(Builder $q, int $airlineId): Builder
+    {
+        return $q->where('airline_id', $airlineId);
+    }
+
+    /**
+     * Filter to users that are not in REJECTED state.
+     * Used by recalculateAllUserStats() — broader than active().
+     */
+    #[Scope]
+    protected function notRejected(Builder $q): Builder
+    {
+        return $q->where('state', '!=', UserState::REJECTED);
     }
 
     protected function casts(): array

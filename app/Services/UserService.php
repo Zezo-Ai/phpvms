@@ -18,9 +18,9 @@ use App\Models\Role;
 use App\Models\Subfleet;
 use App\Models\Typerating;
 use App\Models\User;
+use App\Models\UserField;
 use App\Models\UserFieldValue;
 use App\Repositories\AirlineRepository;
-use App\Repositories\UserRepository;
 use App\Support\Units\Time;
 use App\Support\Utils;
 use Carbon\Carbon;
@@ -38,7 +38,6 @@ class UserService extends Service
     public function __construct(
         private readonly AirlineRepository $airlineRepo,
         private readonly FareService $fareSvc,
-        private readonly UserRepository $userRepo
     ) {}
 
     /**
@@ -53,9 +52,7 @@ class UserService extends Service
         }
 
         /** @var ?User $user */
-        $user = $this->userRepo
-            ->with($with)
-            ->find($user_id);
+        $user = User::with($with)->find($user_id);
 
         if (empty($user)) {
             return null;
@@ -73,6 +70,52 @@ class UserService extends Service
         }
 
         return $user;
+    }
+
+    /**
+     * Get user-defined custom field values for a user, applying the public/private/internal
+     * visibility filter. Absorbed verbatim from the deleted UserRepository::getUserFields()
+     * (3-valued contract preserved).
+     *
+     * @param  bool|null                  $only_public_fields   When true:  return only public fields (private = false).
+     *                                                          When false: return only private fields (private = true).
+     *                                                          When null:  return all visibility-allowed fields (no private filter).
+     * @param  bool                       $with_internal_fields When true:  also include internal fields.
+     *                                                          When false: exclude internal fields entirely.
+     * @return Collection<int, UserField>
+     */
+    public function getUserFields(
+        User $user,
+        ?bool $only_public_fields = null,
+        bool $with_internal_fields = false,
+    ): Collection {
+        $fields = UserField::when(!$with_internal_fields, function ($query) {
+            return $query->where('internal', false);
+        });
+
+        if (is_bool($only_public_fields)) {
+            $fields = $fields->where(['private' => !$only_public_fields]);
+        }
+
+        $fields = $fields->get();
+
+        return $fields->map(function ($field, $_) use ($user) {
+            foreach ($user->fields as $userFieldValue) {
+                if ($userFieldValue->field->slug === $field->slug) {
+                    $field->value = $userFieldValue->value;
+                }
+            }
+
+            return $field;
+        });
+    }
+
+    /**
+     * Count users in PENDING state (awaiting registration approval).
+     */
+    public function getPendingCount(): int
+    {
+        return User::pending()->count();
     }
 
     /**
@@ -471,14 +514,10 @@ class UserService extends Service
      */
     public function recalculateAllUserStats(): void
     {
-        $w = [
-            ['state', '!=', UserState::REJECTED],
-        ];
-
-        $this->userRepo
-            ->findWhere($w, ['id', 'name', 'airline_id'])
-            ->each(function ($user, $_) {
-                return $this->recalculateStats($user);
+        User::notRejected()
+            ->get(['id', 'name', 'airline_id'])
+            ->each(function (User $user): void {
+                $this->recalculateStats($user);
             });
     }
 

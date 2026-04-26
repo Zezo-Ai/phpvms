@@ -12,12 +12,10 @@ use App\Models\Observers\JournalObserver;
 use App\Models\Observers\JournalTransactionObserver;
 use App\Models\Observers\SettingObserver;
 use App\Models\Observers\Sluggable;
-use App\Models\Observers\UserObserver;
 use App\Models\Page;
 use App\Models\PirepField;
 use App\Models\PirepFieldValue;
 use App\Models\Setting;
-use App\Models\User;
 use Illuminate\Support\ServiceProvider;
 
 class ObserverServiceProviders extends ServiceProvider
@@ -37,6 +35,5 @@ class ObserverServiceProviders extends ServiceProvider
         PirepFieldValue::observe(Sluggable::class);
 
         Setting::observe(SettingObserver::class);
-        User::observe(UserObserver::class);
     }
 }

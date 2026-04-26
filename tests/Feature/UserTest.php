@@ -15,6 +15,7 @@ use App\Models\Subfleet;
 use App\Models\User;
 use App\Services\FareService;
 use App\Services\UserService;
+use App\Widgets\LatestPilots;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
@@ -405,4 +406,98 @@ test('event called when profile updated', function () {
     $resp = $this->actingAs($user)->put('/profile/'.$user->id, $body);
 
     Event::assertDispatched(ProfileUpdated::class);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Characterization tests for the /users page + LatestPilots widget
+|--------------------------------------------------------------------------
+| These tests lock in the CURRENT behavior of the public pilots list and
+| the LatestPilots dashboard widget so that subsequent refactoring (Phase 4
+| Prettus repository removal) can be verified to be behavior-preserving.
+*/
+
+test('pilots list renders all states when hide_inactive is off', function () {
+    updateSetting('pilots.hide_inactive', false);
+
+    User::factory()->create(['name' => 'PilotActive', 'state' => UserState::ACTIVE]);
+    User::factory()->create(['name' => 'PilotPending', 'state' => UserState::PENDING]);
+    User::factory()->create(['name' => 'PilotLeave', 'state' => UserState::ON_LEAVE]);
+
+    $response = $this->get('/users');
+
+    $response->assertOk();
+    $response->assertSee('PilotActive');
+    $response->assertSee('PilotPending');
+    $response->assertSee('PilotLeave');
+});
+
+test('pilots list filters to active when hide_inactive is on', function () {
+    updateSetting('pilots.hide_inactive', true);
+
+    User::factory()->create(['name' => 'PilotActive', 'state' => UserState::ACTIVE]);
+    User::factory()->create(['name' => 'PilotPending', 'state' => UserState::PENDING]);
+    User::factory()->create(['name' => 'PilotRejected', 'state' => UserState::REJECTED]);
+
+    $response = $this->get('/users');
+
+    $response->assertOk();
+    $response->assertSee('PilotActive');
+    $response->assertDontSee('PilotPending');
+    $response->assertDontSee('PilotRejected');
+});
+
+test('pilots list filters by free-text search', function () {
+    updateSetting('pilots.hide_inactive', false);
+
+    User::factory()->create(['name' => 'JohnDoe', 'state' => UserState::ACTIVE]);
+    User::factory()->create(['name' => 'JaneSmith', 'state' => UserState::ACTIVE]);
+
+    $response = $this->get('/users?search=JohnDoe');
+
+    $response->assertOk();
+    $response->assertSee('JohnDoe');
+    $response->assertDontSee('JaneSmith');
+});
+
+test('pilots list filters by field-specific search syntax', function () {
+    updateSetting('pilots.hide_inactive', false);
+
+    User::factory()->create(['name' => 'JohnDoe', 'state' => UserState::ACTIVE]);
+    User::factory()->create(['name' => 'BobSmith', 'state' => UserState::ACTIVE]);
+
+    $response = $this->get('/users?search=name:JohnDoe');
+
+    $response->assertOk();
+    $response->assertSee('JohnDoe');
+    $response->assertDontSee('BobSmith');
+});
+
+test('LatestPilots widget excludes deleted users and orders by created_at desc', function () {
+    User::factory()->create([
+        'name'       => 'Newest',
+        'state'      => UserState::ACTIVE,
+        'created_at' => Carbon::now('UTC'),
+    ]);
+    User::factory()->create([
+        'name'       => 'Older',
+        'state'      => UserState::ACTIVE,
+        'created_at' => Carbon::now('UTC')->subDay(),
+    ]);
+    User::factory()->create([
+        'name'       => 'Deleted',
+        'state'      => UserState::DELETED,
+        'created_at' => Carbon::now('UTC')->addHour(),
+    ]);
+
+    $widget = new LatestPilots(['count' => 5]);
+    $rendered = (string) $widget->run()->render();
+
+    expect($rendered)->toContain('Newest');
+    expect($rendered)->toContain('Older');
+    expect($rendered)->not->toContain('Deleted');
+
+    $newestPos = strpos($rendered, 'Newest');
+    $olderPos = strpos($rendered, 'Older');
+    expect($newestPos)->toBeLessThan($olderPos);
 });

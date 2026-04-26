@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Repositories\AirlineRepository;
 use App\Repositories\Criteria\WhereCriteria;
 use App\Repositories\FlightRepository;
-use App\Repositories\UserRepository;
 use App\Services\FlightService;
 use App\Services\GeoService;
 use App\Services\ModuleService;
@@ -37,7 +36,6 @@ class FlightController extends Controller
         private readonly FlightService $flightSvc,
         private readonly GeoService $geoSvc,
         private readonly ModuleService $moduleSvc,
-        private readonly UserRepository $userRepo,
         private readonly UserService $userSvc
     ) {}
 
@@ -187,9 +185,7 @@ class FlightController extends Controller
      */
     public function bids(Request $request): View
     {
-        $user = $this->userRepo
-            ->with(['bids', 'bids.flight'])
-            ->find(Auth::user()->id);
+        $user = User::with(['bids', 'bids.flight'])->findOrFail(Auth::id());
 
         $flights = collect();
         $saved_flights = [];
