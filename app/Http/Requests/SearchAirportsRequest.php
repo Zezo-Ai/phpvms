@@ -45,8 +45,11 @@ class SearchAirportsRequest extends FormRequest
 
     public function rules(): array
     {
+        $maxLimit = (int) config('repository.pagination.limit', 50);
+
         return [
             'search'       => ['sometimes', 'string', 'max:255'],
+            'limit'        => ['sometimes', 'integer', 'min:1', 'max:'.$maxLimit],
             'searchFields' => [
                 'sometimes',
                 'string',

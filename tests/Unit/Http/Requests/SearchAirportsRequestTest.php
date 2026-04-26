@@ -48,6 +48,10 @@ test('SearchAirportsRequest passes with legacy multi-column orderBy', function (
     ])->passes())->toBeTrue();
 });
 
+test('SearchAirportsRequest passes with limit inside configured page size', function () {
+    expect(validateSearchAirports(['limit' => (string) config('repository.pagination.limit')])->passes())->toBeTrue();
+});
+
 test('SearchAirportsRequest passes with additional legacy sortable columns', function () {
     expect(validateSearchAirports(['orderBy' => 'notes'])->passes())->toBeTrue();
 });
@@ -70,4 +74,15 @@ test('SearchAirportsRequest rejects sortedBy outside asc/desc', function () {
 
 test('SearchAirportsRequest rejects search longer than 255 chars', function () {
     expect(validateSearchAirports(['search' => str_repeat('x', 256)])->fails())->toBeTrue();
+});
+
+test('SearchAirportsRequest rejects non-positive limit values', function () {
+    expect(validateSearchAirports(['limit' => '0'])->fails())->toBeTrue()
+        ->and(validateSearchAirports(['limit' => '-1'])->fails())->toBeTrue();
+});
+
+test('SearchAirportsRequest rejects limit above configured page size', function () {
+    $tooLarge = (string) (config('repository.pagination.limit') + 1);
+
+    expect(validateSearchAirports(['limit' => $tooLarge])->fails())->toBeTrue();
 });

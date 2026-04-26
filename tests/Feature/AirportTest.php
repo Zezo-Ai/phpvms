@@ -246,6 +246,28 @@ test('airport list honors ?limit query param', function () {
         ->and($response->json('meta.per_page'))->toBe(3);
 });
 
+test('airport list rejects invalid non-positive limits', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->count(3)->create();
+
+    $response = $this->get('/api/airports?limit=0');
+
+    $response->assertStatus(400);
+});
+
+test('airport hubs list rejects invalid non-positive limits', function () {
+    $user = User::factory()->create();
+    apiAs($user);
+
+    Airport::factory()->count(3)->create();
+
+    $response = $this->get('/api/airports/hubs?limit=0');
+
+    $response->assertStatus(400);
+});
+
 test('GET /api/airports/{airport} resolves lowercase ICAO via route binding', function () {
     $user = User::factory()->create();
     apiAs($user);

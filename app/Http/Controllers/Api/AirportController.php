@@ -34,7 +34,7 @@ class AirportController extends Controller
         return AirportResource::collection($airports);
     }
 
-    public function index_hubs(Request $request): AnonymousResourceCollection
+    public function index_hubs(SearchAirportsRequest $request): AnonymousResourceCollection
     {
         $airports = Airport::byHub()
             ->orderByIcao()
@@ -97,8 +97,9 @@ class AirportController extends Controller
      */
     private function perPage(Request $request): int
     {
-        $max = config('repository.pagination.limit', 50);
+        $max = (int) config('repository.pagination.limit', 50);
+        $limit = (int) $request->query('limit', $max);
 
-        return (int) ($request->query('limit') ?? $max);
+        return min(max($limit, 1), $max);
     }
 }

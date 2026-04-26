@@ -280,6 +280,16 @@ class PirepController extends Controller
         }
 
         $pirep_source = filled(optional($pirep)->source) ? $pirep->source : PirepSource::MANUAL;
+        $airports = ['' => ''];
+
+        if ($pirep instanceof Pirep) {
+            $airports[$pirep->arr_airport->id] = $pirep->arr_airport->full_name;
+            $airports[$pirep->dpt_airport->id] = $pirep->dpt_airport->full_name;
+
+            if ($pirep->alt_airport_id) {
+                $airports[$pirep->alt_airport->id] = $pirep->alt_airport->full_name;
+            }
+        }
 
         return view('pireps.create', [
             'aircraft'      => $aircraft,
@@ -287,7 +297,7 @@ class PirepController extends Controller
             'read_only'     => false,
             'airline_list'  => $this->airlineRepo->selectBoxList(true),
             'aircraft_list' => $aircraft_list,
-            'airport_list'  => [],
+            'airport_list'  => $airports,
             'pirep_fields'  => PirepField::whereIn('pirep_source', [$pirep_source, PirepFieldSource::BOTH])->get(),
             'field_values'  => [],
             'fare_values'   => $fare_values,
