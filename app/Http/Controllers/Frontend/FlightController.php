@@ -185,7 +185,7 @@ class FlightController extends Controller
      */
     public function bids(Request $request): View
     {
-        $user = User::with(['bids', 'bids.flight'])->find(Auth::id());
+        $user = User::with(['bids', 'bids.flight'])->findOrFail(Auth::id());
 
         $flights = collect();
         $saved_flights = [];
