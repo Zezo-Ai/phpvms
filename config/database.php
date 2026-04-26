@@ -56,7 +56,7 @@ return [
         ],
         'testing' => [
             'driver'         => 'sqlite',
-            'database'       => env('DB_DATABASE', storage_path('testing.sqlite')),
+            'database'       => storage_path('testing.sqlite'),
             'timezone'       => '+00:00',
             'prefix'         => '',
             'prefix_indexes' => true,
