@@ -19,9 +19,11 @@ class UserController extends Controller
      */
     public function index(SearchUsersRequest $request): View
     {
+        $perPage = $request->integer('limit') ?: config('repository.pagination.limit', 15);
+
         $pilots = $this->userSearchQuery
             ->build($request)
-            ->paginate();
+            ->paginate($perPage);
 
         return view('users.index', [
             'country' => new ISO3166(),

@@ -54,6 +54,34 @@ test('UserSearchQuery filters by field-specific search', function () {
     expect($names)->toBe(['John Doe']);
 });
 
+test('UserSearchQuery joins multi-pair field-specific search with OR', function () {
+    updateSetting('pilots.hide_inactive', false);
+
+    User::factory()->create(['name' => 'John Doe',   'email' => 'unrelated@x.com', 'state' => UserState::ACTIVE]);
+    User::factory()->create(['name' => 'Other',      'email' => 'foo@bar.com',     'state' => UserState::ACTIVE]);
+    User::factory()->create(['name' => 'NoMatch',    'email' => 'baz@qux.com',     'state' => UserState::ACTIVE]);
+
+    // Either name LIKE %John% OR email LIKE %foo% — first two should match.
+    $request = userSearchRequest(['search' => 'name:John;email:foo']);
+    $names = (new UserSearchQuery())->build($request)->pluck('name')->sort()->values()->all();
+
+    expect($names)->toBe(['John Doe', 'Other']);
+});
+
+test('UserSearchQuery falls back to free-text when colon search has no allowlisted fields', function () {
+    updateSetting('pilots.hide_inactive', false);
+
+    // Search payload `8:30` contains a colon but no field key matches FIELD_SEARCH allowlist.
+    // Old code silently returned all rows; new code treats the whole string as free-text.
+    User::factory()->create(['name' => 'foo 8:30 bar', 'email' => 'a@b.com',  'state' => UserState::ACTIVE]);
+    User::factory()->create(['name' => 'unrelated',    'email' => 'c@d.com',  'state' => UserState::ACTIVE]);
+
+    $request = userSearchRequest(['search' => '8:30']);
+    $names = (new UserSearchQuery())->build($request)->pluck('name')->all();
+
+    expect($names)->toBe(['foo 8:30 bar']);
+});
+
 test('UserSearchQuery applies pilots.hide_inactive setting', function () {
     updateSetting('pilots.hide_inactive', true);
 

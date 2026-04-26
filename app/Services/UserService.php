@@ -74,11 +74,13 @@ class UserService extends Service
 
     /**
      * Get user-defined custom field values for a user, applying the public/private/internal
-     * visibility filter. Absorbed from the deleted UserRepository::getUserFields().
+     * visibility filter. Absorbed verbatim from the deleted UserRepository::getUserFields()
+     * (3-valued contract preserved).
      *
-     * @param  bool|null                  $only_public_fields   When true: exclude private fields.
-     *                                                          When false or null: include all visibility-allowed fields.
-     * @param  bool                       $with_internal_fields When true: also include internal fields.
+     * @param  bool|null                  $only_public_fields   When true:  return only public fields (private = false).
+     *                                                          When false: return only private fields (private = true).
+     *                                                          When null:  return all visibility-allowed fields (no private filter).
+     * @param  bool                       $with_internal_fields When true:  also include internal fields.
      *                                                          When false: exclude internal fields entirely.
      * @return Collection<int, UserField>
      */

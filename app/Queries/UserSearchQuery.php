@@ -83,29 +83,42 @@ class UserSearchQuery
             return;
         }
 
-        // Field-specific syntax: `name:John;state:1`
+        // Field-specific syntax: `name:John;email:foo` (OR-joined, matching
+        // the legacy Prettus RequestCriteria default `searchJoin`). Falls back
+        // to free-text matching when no field key is in the allowlist (so
+        // payloads like `8:30` aren't silently treated as "match everything").
         if (str_contains($search, ':')) {
-            $pairs = array_filter(explode(';', $search));
-            $query->where(function (Builder $q) use ($pairs): void {
-                foreach ($pairs as $pair) {
-                    [$field, $value] = array_pad(explode(':', $pair, 2), 2, '');
-                    $field = trim($field);
-                    $value = trim($value);
-
-                    if ($field === '' || $value === '' || !isset(self::FIELD_SEARCH[$field])) {
-                        continue;
-                    }
-
-                    $operator = self::FIELD_SEARCH[$field];
-                    if ($operator === 'like') {
-                        $q->where($field, 'like', '%'.$value.'%');
-                    } else {
-                        $q->where($field, '=', $value);
-                    }
+            $clauses = [];
+            foreach (explode(';', $search) as $pair) {
+                if (trim($pair) === '') {
+                    continue;
                 }
-            });
+                [$field, $value] = array_pad(explode(':', $pair, 2), 2, '');
+                $field = trim($field);
+                $value = trim($value);
 
-            return;
+                if ($field === '' || $value === '' || !isset(self::FIELD_SEARCH[$field])) {
+                    continue;
+                }
+
+                $clauses[] = [$field, self::FIELD_SEARCH[$field], $value];
+            }
+
+            if ($clauses !== []) {
+                $query->where(function (Builder $q) use ($clauses): void {
+                    foreach ($clauses as [$field, $operator, $value]) {
+                        if ($operator === 'like') {
+                            $q->orWhere($field, 'like', '%'.$value.'%');
+                        } else {
+                            $q->orWhere($field, '=', $value);
+                        }
+                    }
+                });
+
+                return;
+            }
+
+            // No allowlisted field matched — treat the whole string as free-text.
         }
 
         // Free-text: OR across name + email

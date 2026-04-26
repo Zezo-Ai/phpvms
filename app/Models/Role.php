@@ -63,7 +63,9 @@ class Role extends SpatieRole
     }
 
     /**
-     * Filter by role name (case-sensitive).
+     * Filter by exact role name. Case-sensitivity follows the database
+     * collation (case-sensitive on SQLite default; case-insensitive on
+     * MySQL `utf8mb4_unicode_ci`).
      */
     #[Scope]
     protected function byName(Builder $q, string $name): Builder
