@@ -6,10 +6,10 @@ namespace App\Services;
 
 use App\Contracts\Service;
 use App\Models\Airline;
+use App\Models\Pirep;
 use App\Models\Subfleet;
 use App\Repositories\AirlineRepository;
 use App\Repositories\FlightRepository;
-use App\Repositories\PirepRepository;
 use Prettus\Validator\Exceptions\ValidatorException;
 
 class AirlineService extends Service
@@ -17,7 +17,6 @@ class AirlineService extends Service
     public function __construct(
         private readonly AirlineRepository $airlineRepo,
         private readonly FlightRepository $flightRepo,
-        private readonly PirepRepository $pirepRepo
     ) {}
 
     /**
@@ -42,7 +41,7 @@ class AirlineService extends Service
     {
         $w = ['airline_id' => $airline->id];
 
-        if ($this->pirepRepo->count($w) > 0) {
+        if (Pirep::where('airline_id', $airline->id)->count() > 0) {
             return false;
         }
 

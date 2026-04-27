@@ -14,10 +14,10 @@ use App\Models\Enums\PirepStatus;
 use App\Models\Flight;
 use App\Models\FlightFieldValue;
 use App\Models\Navdata;
+use App\Models\Pirep;
 use App\Models\Subfleet;
 use App\Models\User;
 use App\Repositories\FlightRepository;
-use App\Repositories\PirepRepository;
 use App\Support\Units\Time;
 use Exception;
 use Illuminate\Http\RedirectResponse;
@@ -29,7 +29,6 @@ class FlightService extends Service
     public function __construct(
         private readonly AirportService $airportSvc,
         private readonly FlightRepository $flightRepo,
-        private readonly PirepRepository $pirepRepo,
         private readonly UserService $userSvc
     ) {}
 
@@ -297,8 +296,7 @@ class FlightService extends Service
         $flights = $this->flightRepo->where('route_code', PirepStatus::DIVERTED)->get();
 
         foreach ($flights as $flight) {
-            $diverted_pirep = $this->pirepRepo
-                ->with('aircraft')
+            $diverted_pirep = Pirep::with('aircraft')
                 ->where([
                     'user_id'        => $flight->user_id,
                     'arr_airport_id' => $flight->dpt_airport_id,
