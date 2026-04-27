@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Frontend;
 use App\Contracts\Controller;
 use App\Filament\Resources\Pireps\PirepResource;
 use App\Http\Requests\CreatePirepRequest;
+use App\Http\Requests\SearchPirepsRequest;
 use App\Http\Requests\UpdatePirepRequest;
 use App\Models\Aircraft;
 use App\Models\Enums\PirepFieldSource;
@@ -16,10 +17,9 @@ use App\Models\PirepFare;
 use App\Models\PirepField;
 use App\Models\SimBrief;
 use App\Models\User;
+use App\Queries\PirepSearchQuery;
 use App\Repositories\AirlineRepository;
-use App\Repositories\Criteria\WhereCriteria;
 use App\Repositories\FlightRepository;
-use App\Repositories\PirepRepository;
 use App\Services\FareService;
 use App\Services\GeoService;
 use App\Services\PirepService;
@@ -46,7 +46,7 @@ class PirepController extends Controller
         private readonly FareService $fareSvc,
         private readonly FlightRepository $flightRepo,
         private readonly GeoService $geoSvc,
-        private readonly PirepRepository $pirepRepo,
+        private readonly PirepSearchQuery $pirepSearchQuery,
         private readonly PirepService $pirepSvc,
         private readonly UserService $userSvc
     ) {}
@@ -139,12 +139,14 @@ class PirepController extends Controller
     /**
      * @throws RepositoryException
      */
-    public function index(Request $request): View
+    public function index(SearchPirepsRequest $request): View
     {
         $user = Auth::user();
 
-        $where = [['user_id', $user->id]];
-        $where[] = ['state', '<>', PirepState::CANCELLED];
+        $where = [
+            ['user_id', '=', $user->id],
+            ['state', '<>', PirepState::CANCELLED],
+        ];
 
         // Support retrieval of deleted relationships
         $with = [
@@ -164,8 +166,20 @@ class PirepController extends Controller
             'fares',
         ];
 
-        $this->pirepRepo->with($with)->pushCriteria(new WhereCriteria($request, $where));
-        $pireps = $this->pirepRepo->sortable(['submitted_at' => 'desc'])->paginate();
+        $query = $this->pirepSearchQuery->build($request)->with($with);
+
+        // Apply controller-owned filters (the previous $where array).
+        foreach ($where as [$col, $op, $val]) {
+            $query->where($col, $op, $val);
+        }
+
+        // Default ordering: legacy sortable() fallback was submitted_at desc.
+        if (!$request->filled('orderBy')) {
+            $query->orderBy('submitted_at', 'desc');
+        }
+
+        $perPage = $request->integer('limit') ?: config('repository.pagination.limit', 50);
+        $pireps = $query->paginate($perPage);
 
         return view('pireps.index', [
             'user'   => $user,
@@ -203,7 +217,7 @@ class PirepController extends Controller
             },
         ];
 
-        $pirep = $this->pirepRepo->with($with)->find($id);
+        $pirep = Pirep::with($with)->find($id);
         if (empty($pirep)) {
             Flash::error('Pirep not found');
 
@@ -444,9 +458,7 @@ class PirepController extends Controller
     public function edit(string $id): RedirectResponse|View
     {
         /** @var ?Pirep $pirep */
-        $pirep = $this->pirepRepo
-            ->with(['dpt_airport', 'arr_airport', 'alt_airport'])
-            ->findWithoutFail($id);
+        $pirep = Pirep::with(['dpt_airport', 'arr_airport', 'alt_airport'])->find($id);
 
         if (!$pirep) {
             Flash::error('Pirep not found');
@@ -521,7 +533,7 @@ class PirepController extends Controller
         $user = Auth::user();
 
         /** @var ?Pirep $pirep */
-        $pirep = $this->pirepRepo->findWithoutFail($id);
+        $pirep = Pirep::find($id);
         if (!$pirep) {
             Flash::error('Pirep not found');
 
@@ -545,7 +557,8 @@ class PirepController extends Controller
         $attrs['block_fuel'] = Fuel::make((float) $attrs['block_fuel'], setting('units.fuel'));
         $attrs['fuel_used'] = Fuel::make((float) $attrs['fuel_used'], setting('units.fuel'));
 
-        $pirep = $this->pirepRepo->update($attrs, $id);
+        $pirep->update($attrs);
+        $pirep->refresh();
 
         // A route change in the PIREP, so update the saved points in the ACARS table
         if ($pirep->route !== $orig_route) {
@@ -579,7 +592,7 @@ class PirepController extends Controller
      */
     public function submit(string $id, Request $request): RedirectResponse
     {
-        $pirep = $this->pirepRepo->findWithoutFail($id);
+        $pirep = Pirep::find($id);
         if (empty($pirep)) {
             Flash::error('PIREP not found');
 
