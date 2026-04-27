@@ -12,6 +12,7 @@ use App\Models\Enums\AcarsType;
 use App\Models\Enums\PirepFieldSource;
 use App\Models\Enums\PirepState;
 use App\Models\Traits\HashIdTrait;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -596,5 +597,25 @@ class Pirep extends Model
             'state'               => 'integer',
             'submitted_at'        => CarbonCast::class,
         ];
+    }
+
+    /**
+     * Scope: PIREPs with state = IN_PROGRESS, optionally constrained to those
+     * updated within the last $liveTime hours, ordered by updated_at desc, with
+     * the relations needed by the live-map / live-flights endpoints eager-loaded.
+     *
+     * Replaces the previously-misnamed AcarsRepository::getPositions() method.
+     */
+    public function scopeActiveFlights(Builder $query, int $liveTime = 0): Builder
+    {
+        $query
+            ->with(['aircraft', 'airline', 'arr_airport', 'dpt_airport', 'position', 'user'])
+            ->where('state', PirepState::IN_PROGRESS);
+
+        if ($liveTime > 0) {
+            $query->where('updated_at', '>=', Carbon::now()->subHours($liveTime));
+        }
+
+        return $query->orderBy('updated_at', 'desc');
     }
 }
