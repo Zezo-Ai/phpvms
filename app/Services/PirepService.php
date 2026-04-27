@@ -38,7 +38,6 @@ use App\Models\SimBrief;
 use App\Models\User;
 use App\Notifications\Messages\Broadcast\PirepDiverted;
 use App\Repositories\FlightRepository;
-use App\Repositories\PirepRepository;
 use App\Support\Units\Fuel;
 use Carbon\Carbon;
 use Exception;
@@ -57,7 +56,6 @@ class PirepService extends Service
         private readonly FareService $fareSvc,
         private readonly FlightRepository $flightRepo,
         private readonly GeoService $geoSvc,
-        private readonly PirepRepository $pirepRepo,
         private readonly SimBriefService $simBriefSvc,
         private readonly UserService $userSvc
     ) {}
@@ -233,7 +231,10 @@ class PirepService extends Service
      */
     public function update(string $pirep_id, array $attrs, array $fields = [], array $fares = []): Pirep
     {
-        $pirep = $this->pirepRepo->update($attrs, $pirep_id);
+        $pirep = Pirep::findOrFail($pirep_id);
+        $pirep->update($attrs);
+        $pirep->refresh();
+
         $this->updateCustomFields($pirep_id, $fields);
         $this->fareSvc->saveToPirep($pirep, $fares);
 
@@ -270,7 +271,7 @@ class PirepService extends Service
         $attrs['status'] = PirepStatus::ARRIVED;
         $attrs['submitted_at'] = Carbon::now('UTC');
 
-        $this->pirepRepo->update($attrs, $pirep->id);
+        $pirep->update($attrs);
         $pirep->refresh();
 
         // Check if there is a simbrief_id, change it to be set to the PIREP
@@ -475,10 +476,11 @@ class PirepService extends Service
             throw new PirepCancelNotAllowed($pirep);
         }
 
-        $pirep = $this->pirepRepo->update([
+        $pirep->update([
             'state'  => PirepState::CANCELLED,
             'status' => PirepStatus::CANCELLED,
-        ], $pirep->id);
+        ]);
+        $pirep->refresh();
 
         event(new PirepCancelled($pirep));
 
