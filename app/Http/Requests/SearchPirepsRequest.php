@@ -39,6 +39,7 @@ class SearchPirepsRequest extends FormRequest
         'aircraft_id',
         'dpt_airport_id',
         'arr_airport_id',
+        'flight_time',
         'state',
         'status',
         'submitted_at',
@@ -47,6 +48,26 @@ class SearchPirepsRequest extends FormRequest
     ];
 
     public const array SORT_DIRECTIONS = ['asc', 'desc'];
+
+    /**
+     * Alias kyslik/column-sortable's ?sort=&direction= params (emitted by
+     *
+     * @sortablelink in blade) onto our canonical ?orderBy=&sortedBy= params
+     * before validation runs. Either pair works; explicit orderBy wins.
+     */
+    protected function prepareForValidation(): void
+    {
+        $merge = [];
+        if (!$this->filled('orderBy') && $this->filled('sort')) {
+            $merge['orderBy'] = $this->input('sort');
+        }
+        if (!$this->filled('sortedBy') && $this->filled('direction')) {
+            $merge['sortedBy'] = $this->input('direction');
+        }
+        if ($merge !== []) {
+            $this->merge($merge);
+        }
+    }
 
     public function rules(): array
     {
