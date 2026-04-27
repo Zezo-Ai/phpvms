@@ -178,6 +178,10 @@ class UserController extends Controller
             $query->where('state', '!=', PirepState::CANCELLED);
         }
 
+        if (filled($request->query('status'))) {
+            $query->where('status', $request->query('status'));
+        }
+
         // Default ordering when no orderBy supplied — matches legacy behavior.
         if (!$request->filled('orderBy')) {
             $query->orderBy('created_at', 'desc');
