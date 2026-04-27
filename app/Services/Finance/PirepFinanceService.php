@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Finance;
 
 use App\Contracts\Service;
@@ -18,7 +20,6 @@ use App\Models\Fare;
 use App\Models\Pirep;
 use App\Models\PirepFare;
 use App\Models\Subfleet;
-use App\Repositories\ExpenseRepository;
 use App\Repositories\JournalRepository;
 use App\Services\FareService;
 use App\Services\FinanceService;
@@ -37,7 +38,6 @@ class PirepFinanceService extends Service
      * FinanceService constructor.
      */
     public function __construct(
-        private readonly ExpenseRepository $expenseRepo,
         private readonly FareService $fareSvc,
         private readonly FinanceService $financeSvc,
         private readonly JournalRepository $journalRepo
@@ -296,7 +296,7 @@ class PirepFinanceService extends Service
      */
     public function payExpensesForPirep(Pirep $pirep): void
     {
-        $expenses = $this->expenseRepo->getAllForType(
+        $expenses = $this->financeSvc->getExpensesForType(
             ExpenseType::FLIGHT,
             $pirep->airline_id
         );
@@ -386,7 +386,7 @@ class PirepFinanceService extends Service
      */
     public function payAirportExpensesForPirep(Pirep $pirep): void
     {
-        $expenses = $this->expenseRepo->getAllForType(
+        $expenses = $this->financeSvc->getExpensesForType(
             ExpenseType::FLIGHT,
             $pirep->airline_id,
             Airport::class,
