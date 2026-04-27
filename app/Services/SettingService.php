@@ -52,8 +52,8 @@ class SettingService extends Service
 
     /**
      * Update an existing setting. Returns the value on success, null when
-     * the key does not exist (does not insert new settings — these are
-     * seeded by migrations).
+     * the key does not exist OR when the caller passes a null $value
+     * (does not insert new settings — these are seeded by migrations).
      *
      * Invalidates the per-key application cache slot on success so the
      * `setting()` global helper observes the new value. The cache slot

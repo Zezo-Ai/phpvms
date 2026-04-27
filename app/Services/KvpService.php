@@ -8,7 +8,7 @@ use Spatie\Valuestore\Valuestore;
 
 class KvpService
 {
-    private $valueStore;
+    private Valuestore $valueStore;
 
     public function __construct()
     {
@@ -19,7 +19,7 @@ class KvpService
      * @param  null              $default
      * @return array|string|null
      */
-    public function retrieve($key, $default = null)
+    public function retrieve(string $key, mixed $default = null): mixed
     {
         return $this->get($key, $default);
     }
@@ -27,11 +27,10 @@ class KvpService
     /**
      * Get a value from the KVP store
      *
-     * @param  string            $key
      * @param  mixed             $default default value to return
      * @return array|string|null
      */
-    public function get($key, $default = null)
+    public function get(string $key, mixed $default = null): mixed
     {
         if (!$this->valueStore->has($key)) {
             return $default;
@@ -43,13 +42,11 @@ class KvpService
     /**
      * @alias store($key,$value)
      *
-     * @param  string $key
-     * @param  mixed  $value
      * @return null
      */
-    public function save($key, $value)
+    public function save(string $key, mixed $value): Valuestore
     {
-        return $this->store($key, $value);
+        return $this->valueStore->put($key, $value);
     }
 
     /**
@@ -58,7 +55,7 @@ class KvpService
      *
      * @return null
      */
-    public function store($key, $value)
+    public function store(string $key, mixed $value): Valuestore
     {
         return $this->valueStore->put($key, $value);
     }

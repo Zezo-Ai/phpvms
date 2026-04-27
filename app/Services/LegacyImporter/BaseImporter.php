@@ -128,6 +128,7 @@ abstract class BaseImporter
      */
     protected function convertDuration($duration)
     {
+        $duration = (string) ($duration ?? '');
         if (strpos($duration, '.') !== false) {
             $delim = '.';
         } elseif (strpos($duration, ':')) {
