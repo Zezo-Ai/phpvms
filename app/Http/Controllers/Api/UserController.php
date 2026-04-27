@@ -7,6 +7,7 @@ use App\Exceptions\BidExistsForFlight;
 use App\Exceptions\BidNotFound;
 use App\Exceptions\Unauthorized;
 use App\Exceptions\UserNotFound;
+use App\Http\Requests\SearchPirepsRequest;
 use App\Http\Resources\Bid as BidResource;
 use App\Http\Resources\Pirep as PirepResource;
 use App\Http\Resources\Subfleet as SubfleetResource;
@@ -15,9 +16,8 @@ use App\Models\Aircraft;
 use App\Models\Bid;
 use App\Models\Enums\PirepState;
 use App\Models\User;
-use App\Repositories\Criteria\WhereCriteria;
+use App\Queries\PirepSearchQuery;
 use App\Repositories\FlightRepository;
-use App\Repositories\PirepRepository;
 use App\Services\BidService;
 use App\Services\UserService;
 use Exception;
@@ -27,15 +27,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Prettus\Repository\Criteria\RequestCriteria;
-use Prettus\Repository\Exceptions\RepositoryException;
 
 class UserController extends Controller
 {
     public function __construct(
         private readonly BidService $bidSvc,
         private readonly FlightRepository $flightRepo,
-        private readonly PirepRepository $pirepRepo,
         private readonly UserService $userSvc
     ) {}
 
@@ -170,31 +167,25 @@ class UserController extends Controller
         return SubfleetResource::collection($subfleets);
     }
 
-    /**
-     * @throws RepositoryException
-     */
-    public function pireps(Request $request): AnonymousResourceCollection
+    public function pireps(SearchPirepsRequest $request, PirepSearchQuery $searchQuery): AnonymousResourceCollection
     {
-        $this->pirepRepo->pushCriteria(new RequestCriteria($request));
-
-        $where = [
-            'user_id' => $this->getUserId($request),
-        ];
+        $query = $searchQuery->build($request)
+            ->where('user_id', $this->getUserId($request));
 
         if (filled($request->query('state'))) {
-            $where['state'] = $request->query('state');
+            $query->where('state', $request->query('state'));
         } else {
-            $where[] = ['state', '!=', PirepState::CANCELLED];
+            $query->where('state', '!=', PirepState::CANCELLED);
         }
 
-        $this->pirepRepo->pushCriteria(new WhereCriteria($request, $where));
+        // Default ordering when no orderBy supplied — matches legacy behavior.
+        if (!$request->filled('orderBy')) {
+            $query->orderBy('created_at', 'desc');
+        }
 
-        $pireps = $this->pirepRepo
-            ->with(['aircraft', 'airline', 'dpt_airport', 'arr_airport'])
-            ->orderBy('created_at', 'desc')
-            ->paginate();
+        $perPage = $request->integer('limit') ?: config('repository.pagination.limit', 50);
 
-        return PirepResource::collection($pireps);
+        return PirepResource::collection($query->paginate($perPage));
     }
 
     /**
