@@ -21,16 +21,12 @@ use Illuminate\Database\Eloquent\Builder;
 class PirepSearchQuery
 {
     /**
-     * Field-specific search allowlist. Maps `field:value` syntax to the
-     * column being searched. Mirrors the old PirepRepository::$fieldSearchable.
+     * Field-specific search allowlist. Mirrors the old
+     * PirepRepository::$fieldSearchable.
      *
-     * @var array<string,string> column => operator ('like' or '=')
+     * @var list<string>
      */
-    private const FIELD_SEARCH = [
-        'user_id' => '=',
-        'status'  => '=',
-        'state'   => '=',
-    ];
+    private const FIELD_SEARCH = ['user_id', 'status', 'state'];
 
     /**
      * Free-text search columns (when search has no `field:` prefix).
@@ -69,22 +65,17 @@ class PirepSearchQuery
                 $field = trim($field);
                 $value = trim($value);
 
-                if ($field === '' || $value === '' || !isset(self::FIELD_SEARCH[$field])) {
+                if ($field === '' || $value === '' || !in_array($field, self::FIELD_SEARCH, true)) {
                     continue;
                 }
 
-                $clauses[] = [$field, self::FIELD_SEARCH[$field], $value];
+                $clauses[] = [$field, $value];
             }
 
             if ($clauses !== []) {
                 $query->where(function (Builder $q) use ($clauses): void {
-                    foreach ($clauses as [$field, $operator, $value]) {
-                        // @phpstan-ignore identical.alwaysFalse (defensive: FIELD_SEARCH may add 'like' columns)
-                        if ($operator === 'like') {
-                            $q->orWhere($field, 'like', '%'.$value.'%');
-                        } else {
-                            $q->orWhere($field, '=', $value);
-                        }
+                    foreach ($clauses as [$field, $value]) {
+                        $q->orWhere($field, '=', $value);
                     }
                 });
 

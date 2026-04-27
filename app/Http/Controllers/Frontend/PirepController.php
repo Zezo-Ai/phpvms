@@ -36,7 +36,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Laracasts\Flash\Flash;
-use Prettus\Repository\Exceptions\RepositoryException;
 use Prettus\Validator\Exceptions\ValidatorException;
 
 class PirepController extends Controller
@@ -136,9 +135,6 @@ class PirepController extends Controller
         $this->fareSvc->saveToPirep($pirep, $fares);
     }
 
-    /**
-     * @throws RepositoryException
-     */
     public function index(SearchPirepsRequest $request): View
     {
         $user = Auth::user();
