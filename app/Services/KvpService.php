@@ -41,8 +41,6 @@ class KvpService
 
     /**
      * @alias store($key,$value)
-     *
-     * @return null
      */
     public function save(string $key, mixed $value): Valuestore
     {
@@ -51,9 +49,6 @@ class KvpService
 
     /**
      * Save a value to the KVP store
-     *
-     *
-     * @return null
      */
     public function store(string $key, mixed $value): Valuestore
     {

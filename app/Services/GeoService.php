@@ -10,7 +10,6 @@ use App\Models\Enums\AcarsType;
 use App\Models\Flight;
 use App\Models\Navdata;
 use App\Models\Pirep;
-use App\Repositories\AcarsRepository;
 use App\Support\GeoJson;
 use Exception;
 use GeoJson\Feature\FeatureCollection;
@@ -27,9 +26,7 @@ class GeoService extends Service
     /**
      * GeoService constructor.
      */
-    public function __construct(
-        private readonly AcarsRepository $acarsRepo,
-    ) {}
+    public function __construct() {}
 
     /**
      * Determine the closest set of coordinates from the starting position
@@ -199,7 +196,10 @@ class GeoService extends Service
 
         $route = new GeoJson();
 
-        $actual_route = $this->acarsRepo->forPirep($pirep->id, AcarsType::FLIGHT_PATH);
+        $actual_route = Acars::query()
+            ->where(['pirep_id' => $pirep->id, 'type' => AcarsType::FLIGHT_PATH])
+            ->orderBy('created_at', 'asc')
+            ->get();
         foreach ($actual_route as $point) {
             $route->addPoint($point->lat, $point->lon, [
                 'pirep_id' => $pirep->id,
@@ -320,7 +320,10 @@ class GeoService extends Service
             'popup' => optional($pirep->dpt_airport)->full_name ?? $pirep->dpt_airport_id,
         ]);
 
-        $planned_route = $this->acarsRepo->forPirep($pirep->id, AcarsType::ROUTE);
+        $planned_route = Acars::query()
+            ->where(['pirep_id' => $pirep->id, 'type' => AcarsType::ROUTE])
+            ->orderBy('order', 'asc')
+            ->get();
         foreach ($planned_route as $point) {
             $planned->addPoint($point->lat, $point->lon, [
                 'name'  => $point->name,
@@ -337,7 +340,10 @@ class GeoService extends Service
         /**
          * ACTUAL ROUTE
          */
-        $actual_route = $this->acarsRepo->forPirep($pirep->id, AcarsType::FLIGHT_PATH);
+        $actual_route = Acars::query()
+            ->where(['pirep_id' => $pirep->id, 'type' => AcarsType::FLIGHT_PATH])
+            ->orderBy('created_at', 'asc')
+            ->get();
         foreach ($actual_route as $point) {
             $actual->addPoint($point->lat, $point->lon, [
                 'pirep_id' => $pirep->id,

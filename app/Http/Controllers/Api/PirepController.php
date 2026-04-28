@@ -30,7 +30,6 @@ use App\Models\PirepFare;
 use App\Models\PirepFieldValue;
 use App\Models\User;
 use App\Repositories\JournalRepository;
-use App\Repositories\PirepRepository;
 use App\Services\Finance\PirepFinanceService;
 use App\Services\PirepService;
 use App\Services\UserService;
@@ -52,7 +51,6 @@ class PirepController extends Controller
     public function __construct(
         private readonly PirepFinanceService $financeSvc,
         private readonly JournalRepository $journalRepo,
-        private readonly PirepRepository $pirepRepo,
         private readonly PirepService $pirepSvc,
         private readonly UserService $userSvc
     ) {}
@@ -167,9 +165,7 @@ class PirepController extends Controller
             'user',
         ];
 
-        $pirep = $this->pirepRepo
-            ->with($with)
-            ->find($id);
+        $pirep = Pirep::with($with)->findOrFail($id);
 
         return new PirepResource($pirep);
     }

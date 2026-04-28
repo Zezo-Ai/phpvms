@@ -14,8 +14,6 @@ use App\Http\Resources\Pirep as PirepResource;
 use App\Models\Acars;
 use App\Models\Enums\AcarsType;
 use App\Models\Pirep;
-use App\Repositories\AcarsRepository;
-use App\Repositories\PirepRepository;
 use App\Services\GeoService;
 use Carbon\Carbon;
 use DateTime;
@@ -31,9 +29,7 @@ class AcarsController extends Controller
      * AcarsController constructor.
      */
     public function __construct(
-        private readonly AcarsRepository $acarsRepo,
-        private readonly GeoService $geoSvc,
-        private readonly PirepRepository $pirepRepo
+        private readonly GeoService $geoSvc
     ) {}
 
     /**
@@ -56,7 +52,7 @@ class AcarsController extends Controller
      */
     public function live_flights()
     {
-        $pireps = $this->acarsRepo->getPositions(setting('acars.live_time'))->filter(
+        $pireps = Pirep::activeFlights(setting('acars.live_time'))->get()->filter(
             fn (Pirep $pirep) => $pirep->position !== null
         );
 
@@ -68,7 +64,7 @@ class AcarsController extends Controller
      */
     public function pireps_geojson(Request $request): JsonResponse
     {
-        $pireps = $this->acarsRepo->getPositions(setting('acars.live_time'));
+        $pireps = Pirep::activeFlights(setting('acars.live_time'))->get();
         $positions = $this->geoSvc->getFeatureForLiveFlights($pireps);
 
         return response()->json([
@@ -98,7 +94,7 @@ class AcarsController extends Controller
      */
     public function acars_get(string $id, Request $request): AcarsRouteResource
     {
-        $pirep = $this->pirepRepo->find($id);
+        $pirep = Pirep::find($id);
         if (empty($pirep)) {
             throw new PirepNotFound($id);
         }
