@@ -8,6 +8,8 @@
 namespace App\Models;
 
 use App\Contracts\Model;
+use App\Models\Observers\JournalTransactionObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -47,6 +49,7 @@ use Illuminate\Support\Carbon;
  *
  * @mixin \Eloquent
  */
+#[ObservedBy(JournalTransactionObserver::class)]
 class JournalTransaction extends Model
 {
     use HasFactory;
@@ -84,10 +87,13 @@ class JournalTransaction extends Model
     protected function casts(): array
     {
         return [
-            'credits'   => 'integer',
+            'credit'    => 'integer',
             'debit'     => 'integer',
             'post_date' => 'datetime',
-            'tags'      => 'array',
+            // tags is stored as a comma-separated string (post() implodes
+            // arrays before insert). The previous 'array' cast tried to
+            // JSON-decode that CSV and silently returned null on read.
+            'tags' => 'string',
         ];
     }
 }

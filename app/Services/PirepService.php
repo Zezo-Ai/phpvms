@@ -38,6 +38,7 @@ use App\Models\PirepFieldValue;
 use App\Models\SimBrief;
 use App\Models\User;
 use App\Notifications\Messages\Broadcast\PirepDiverted;
+use App\Services\Finance\PirepFinanceService;
 use App\Support\Units\Fuel;
 use Carbon\Carbon;
 use Exception;
@@ -56,6 +57,7 @@ class PirepService extends Service
         private readonly AirportService $airportSvc,
         private readonly FareService $fareSvc,
         private readonly GeoService $geoSvc,
+        private readonly PirepFinanceService $pirepFinanceSvc,
         private readonly SimBriefService $simBriefSvc,
         private readonly UserService $userSvc
     ) {}
@@ -493,6 +495,7 @@ class PirepService extends Service
      *
      * acars
      * bids
+     * journal_transactions (polymorphic, no FK constraint)
      * pirep_comments
      * pirep_fares
      * pirep_field_values
@@ -502,14 +505,23 @@ class PirepService extends Service
     {
         $user_id = $pirep->user_id;
 
-        $w = ['pirep_id' => $pirep->id];
-        PirepComment::where($w)->forceDelete();
-        PirepFare::where($w)->forceDelete();
-        PirepFieldValue::where($w)->forceDelete();
-        SimBrief::where($w)->forceDelete();
-        $pirep->forceDelete();
+        DB::transaction(function () use ($pirep): void {
+            // Drop journal entries first so they don't dangle. ref_model_id
+            // is polymorphic (no FK), so a cascading database delete won't
+            // catch them; without this the nightly recalc would still see
+            // them and skew journal balances.
+            $this->pirepFinanceSvc->deleteFinancesForPirep($pirep);
 
-        // Update the user's last PIREP
+            $w = ['pirep_id' => $pirep->id];
+            PirepComment::where($w)->forceDelete();
+            PirepFare::where($w)->forceDelete();
+            PirepFieldValue::where($w)->forceDelete();
+            SimBrief::where($w)->forceDelete();
+            $pirep->forceDelete();
+        });
+
+        // Update the user's last PIREP (outside transaction — independent
+        // of the delete cascade and safe to retry if it fails).
         $last_pirep = Pirep::where(['user_id' => $user_id, 'state' => PirepState::ACCEPTED])
             ->latest('submitted_at')
             ->first();
