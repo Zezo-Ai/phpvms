@@ -21,9 +21,7 @@ class FleetController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $limit = $request->query('limit')
-            ? (int) $request->query('limit')
-            : config('repository.pagination.limit', 50);
+        $limit = paginate_limit($request->integer('limit') ?: null);
 
         $subfleets = Subfleet::with(['aircraft', 'airline', 'fares', 'ranks'])
             ->paginate($limit)
